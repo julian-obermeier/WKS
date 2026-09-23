@@ -91,9 +91,9 @@ final class SpecialReportService
         if($repo->openRevisionCount($id)>0)throw new HttpException(422,'Alle Nachforderungen müssen zuerst als erledigt markiert werden.');
 
         Database::connection()->prepare(
-            'UPDATE special_reports SET status="completed",author_confirmed_at=NOW(),completed_by=:user_id,completed_at=NOW(),
-             edit_locked_at=NOW(),updated_at=NOW(),updated_by=:user_id WHERE id=:id AND location_id=:location_id'
-        )->execute(['user_id'=>Auth::id(),'id'=>$id,'location_id'=>$locationId]);
+            'UPDATE special_reports SET status="completed",author_confirmed_at=NOW(),completed_by=:completed_by,completed_at=NOW(),
+             edit_locked_at=NOW(),updated_at=NOW(),updated_by=:updated_by WHERE id=:id AND location_id=:location_id'
+        )->execute(['completed_by'=>Auth::id(),'updated_by'=>Auth::id(),'id'=>$id,'location_id'=>$locationId]);
         (new AuditService())->log('special_report_completed','special_reports',(string)$id,['status'=>$r['status']],['status'=>'completed'],[],null,Auth::id(),$locationId);
         (new NotificationService())->notifyRole('special_report_completed',$locationId,'management','Sonderbericht zur Prüfung','Sonderbericht '.$this->displayNumber($r).' wurde abgeschlossen und wartet auf Leitungsprüfung.',url('special-reports/'.$id),'important');
     }
@@ -134,9 +134,9 @@ final class SpecialReportService
         $pdo=Database::connection();$pdo->beginTransaction();
         try{
             $pdo->prepare(
-                'UPDATE special_reports SET status="reviewed",reviewed_by=:user_id,reviewed_at=NOW(),review_note=:note,
-                 edit_locked_at=NOW(),updated_at=NOW(),updated_by=:user_id WHERE id=:id AND location_id=:location_id'
-            )->execute(['user_id'=>Auth::id(),'note'=>trim($note)?:null,'id'=>$id,'location_id'=>$locationId]);
+                'UPDATE special_reports SET status="reviewed",reviewed_by=:reviewed_by,reviewed_at=NOW(),review_note=:note,
+                 edit_locked_at=NOW(),updated_at=NOW(),updated_by=:updated_by WHERE id=:id AND location_id=:location_id'
+            )->execute(['reviewed_by'=>Auth::id(),'updated_by'=>Auth::id(),'note'=>trim($note)?:null,'id'=>$id,'location_id'=>$locationId]);
             $fresh=$repo->find($id,$locationId)??$r;$version=max(1,(int)$fresh['current_version']+1);
             [$pdfPath,$docxPath]=$this->persistVersionDocuments($fresh,$version);
             $repo->saveVersion($id,$version,$this->snapshot($fresh),(int)Auth::id(),$pdfPath,$docxPath);
