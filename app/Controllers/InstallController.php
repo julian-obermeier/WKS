@@ -168,7 +168,6 @@ final class InstallController
     private function alreadyInstalled(InstallerService $installer): bool
     {
         if($installer->isInstalled())return true;
-        if(!$installer->envConfigured())return false;
 
         try{
             Database::reset();
