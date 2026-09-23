@@ -2,15 +2,24 @@
 declare(strict_types=1);
 
 use WKS\Controllers\Admin\AuditController;
+use WKS\Controllers\Admin\DutybookConfigController;
 use WKS\Controllers\Admin\LocationController;
 use WKS\Controllers\Admin\RoleController;
 use WKS\Controllers\Admin\SettingsController;
+use WKS\Controllers\Admin\SpecialReportConfigController;
 use WKS\Controllers\Admin\UserController;
+use WKS\Controllers\AttachmentController;
 use WKS\Controllers\AuthController;
 use WKS\Controllers\DashboardController;
+use WKS\Controllers\DutybookController;
+use WKS\Controllers\HandoverController;
 use WKS\Controllers\InstallController;
 use WKS\Controllers\LocationSelectionController;
 use WKS\Controllers\ProfileController;
+use WKS\Controllers\ShiftController;
+use WKS\Controllers\SpecialReportController;
+use WKS\Controllers\SpecialReportReviewController;
+use WKS\Controllers\ValuablesController;
 
 /** @var WKS\Core\Router $router */
 
@@ -107,3 +116,18 @@ $router->post('/special-reports/{id}/review/approve', [SpecialReportReviewContro
 $router->get('/admin/special-reports', [SpecialReportConfigController::class, 'index'], ['auth','password','location','permission:system.masterdata.manage']);
 $router->post('/admin/special-reports/type', [SpecialReportConfigController::class, 'saveType'], ['auth','password','location','permission:system.masterdata.manage']);
 $router->post('/admin/special-reports/dynamic-field', [SpecialReportConfigController::class, 'saveField'], ['auth','password','location','permission:system.masterdata.manage']);
+
+
+$router->get('/valuables', [ValuablesController::class, 'index'], ['auth','password','location','permission:valuables.read']);
+$router->get('/valuables/search', [ValuablesController::class, 'search'], ['auth','password','location','permission:valuables.read']);
+$router->get('/valuables/cassettes', [ValuablesController::class, 'cassettes'], ['auth','password','location','permission:valuables.read']);
+$router->get('/valuables/long-term', [ValuablesController::class, 'longTerm'], ['auth','password','location','permission:valuables.read']);
+$router->get('/valuables/check-seal', [ValuablesController::class, 'checkSeal'], ['auth','password','location','permission:valuables.store']);
+$router->get('/valuables/create', [ValuablesController::class, 'create'], ['auth','password','location','permission:valuables.store']);
+$router->post('/valuables', [ValuablesController::class, 'store'], ['auth','password','location','permission:valuables.store']);
+$router->get('/valuables/{id}', [ValuablesController::class, 'show'], ['auth','password','location','permission:valuables.read']);
+$router->get('/valuables/{id}/release', [ValuablesController::class, 'releaseForm'], ['auth','password','location','permission:valuables.release']);
+$router->post('/valuables/{id}/release', [ValuablesController::class, 'release'], ['auth','password','location','permission:valuables.release']);
+$router->post('/valuables/{id}/note', [ValuablesController::class, 'note'], ['auth','password','location','permission:valuables.add_note']);
+$router->get('/valuables/{id}/correction', [ValuablesController::class, 'correction'], ['auth','password','location','permission:valuables.store']);
+$router->get('/valuables-export.csv', [ValuablesController::class, 'exportCsv'], ['auth','password','location','permission:valuables.export']);
