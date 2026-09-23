@@ -47,8 +47,12 @@ final class UserRepository
         $where = 'u.deleted_at IS NULL';
 
         if ($search !== '') {
-            $where .= ' AND (u.first_name LIKE :search OR u.last_name LIKE :search OR u.username LIKE :search OR u.personnel_number LIKE :search)';
-            $params['search'] = '%' . $search . '%';
+            $where .= ' AND (u.first_name LIKE :search_first OR u.last_name LIKE :search_last OR u.username LIKE :search_user OR u.personnel_number LIKE :search_personnel)';
+            $like = '%' . $search . '%';
+            $params['search_first'] = $like;
+            $params['search_last'] = $like;
+            $params['search_user'] = $like;
+            $params['search_personnel'] = $like;
         }
 
         $count = Database::connection()->prepare("SELECT COUNT(*) FROM users u WHERE {$where}");
