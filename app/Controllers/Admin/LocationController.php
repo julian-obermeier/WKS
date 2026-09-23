@@ -5,12 +5,14 @@ namespace WKS\Controllers\Admin;
 
 use PDOException;
 use WKS\Core\Auth;
+use WKS\Core\Database;
 use WKS\Core\HttpException;
 use WKS\Core\Request;
 use WKS\Core\Response;
 use WKS\Core\View;
 use WKS\Repositories\LocationRepository;
 use WKS\Services\AuditService;
+use WKS\Services\LocationProvisioningService;
 
 final class LocationController
 {
@@ -64,7 +66,9 @@ final class LocationController
         }
 
         $repo = new LocationRepository();
+        $pdo=Database::connection();$ownsTransaction=!$pdo->inTransaction();
         try {
+            if($ownsTransaction)$pdo->beginTransaction();
             $payload = [
                 'name' => $name,
                 'code' => $code,
@@ -77,16 +81,26 @@ final class LocationController
 
             if ($id === null) {
                 $newId = $repo->create($payload + ['created_by' => Auth::id()]);
-                (new AuditService())->log('location_created', 'locations', (string) $newId, null, $payload, [], $request);
+                $provisioned=(new LocationProvisioningService())->provision($newId,Auth::id());
+                (new AuditService())->log('location_created', 'locations', (string) $newId, null, $payload, ['provisioned'=>$provisioned], $request);
             } else {
                 $old = $repo->find($id);
                 if (!$old) throw new HttpException(404, 'Standort nicht gefunden.');
                 $repo->update($id, $payload);
-                (new AuditService())->log('location_updated', 'locations', (string) $id, $old, $payload, [], $request);
+                $provisioned=(new LocationProvisioningService())->provision($id,Auth::id());
+                (new AuditService())->log('location_updated', 'locations', (string) $id, $old, $payload, ['provisioned'=>$provisioned], $request);
             }
-        } catch (PDOException) {
-            flash('error', 'Das Standortkürzel wird bereits verwendet.');
-            return Response::redirect($id === null ? url('admin/locations/create') : url('admin/locations/' . $id . '/edit'));
+            if($ownsTransaction)$pdo->commit();
+        } catch (PDOException $e) {
+            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
+            if((string)$e->getCode()==='23000'){
+                flash('error', 'Das Standortkürzel wird bereits verwendet.');
+                return Response::redirect($id === null ? url('admin/locations/create') : url('admin/locations/' . $id . '/edit'));
+            }
+            throw $e;
+        } catch (\Throwable $e) {
+            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
+            throw $e;
         }
 
         flash('success', 'Standort wurde gespeichert.');

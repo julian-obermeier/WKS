@@ -18,6 +18,7 @@ require_once BASE_PATH.'/app/Support/helpers.php';
 date_default_timezone_set((string)config('app.timezone','Europe/Berlin'));
 WKS\Core\Session::start();
 
+use WKS\Controllers\Admin\LocationController;
 use WKS\Controllers\DutybookController;
 use WKS\Core\Auth;
 use WKS\Core\Authorization;
@@ -45,6 +46,7 @@ use WKS\Services\DynamicFormService;
 use WKS\Services\DutybookService;
 use WKS\Services\HandoverService;
 use WKS\Services\HouseBanService;
+use WKS\Services\LocationProvisioningService;
 use WKS\Services\MailService;
 use WKS\Services\PostUpdateCheckService;
 use WKS\Services\ReleaseNotesService;
@@ -121,6 +123,32 @@ $assert($results['total']===3,'native PDO user search works');
 $switchUser($employeeId,$gi);
 $assert(Authorization::can('dutybook.read'),'employee can read dutybook');
 $assert(!Authorization::can('system.users.manage'),'employee cannot manage users');
+
+$switchUser($adminId,$gi);
+$locationController=new LocationController();
+$locationController->store($request('POST','/admin/locations',[
+    'name'=>'Integration Standort','code'=>'ITEST','email_address'=>'security.itest@example.test',
+    'mail_mode'=>'disabled','active'=>'1'
+]));
+$testLocation=$pdo->query('SELECT * FROM locations WHERE code="ITEST" LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+$assert((bool)$testLocation,'new site is created through administration');
+$testLocationId=(int)$testLocation['id'];
+foreach([
+    'shifts'=>4,
+    'cassettes'=>100,
+    'storage_locations'=>51,
+    'special_report_types'=>19,
+    'dutybook_automatic_rules'=>6,
+] as $table=>$expected){
+    $s=$pdo->prepare('SELECT COUNT(*) FROM '.$table.' WHERE location_id=:location_id');
+    $s->execute(['location_id'=>$testLocationId]);
+    $assert((int)$s->fetchColumn()===$expected,'new site provisions '.$table);
+}
+$s=$pdo->prepare('SELECT COUNT(*) FROM dutybook_event_types WHERE location_id=:location_id');$s->execute(['location_id'=>$testLocationId]);
+$assert((int)$s->fetchColumn()>=1,'new site receives a default dutybook event type');
+(new LocationProvisioningService())->provision($testLocationId,$adminId);
+$s=$pdo->prepare('SELECT COUNT(*) FROM cassettes WHERE location_id=:location_id');$s->execute(['location_id'=>$testLocationId]);
+$assert((int)$s->fetchColumn()===100,'site provisioning is idempotent');
 
 echo "[3/9] Master data writes and dynamic configuration\n";
 $switchUser($adminId,$gi);
