@@ -244,7 +244,7 @@ final class MasterDataRepository
             'UPDATE dynamic_fields f
              JOIN dutybook_event_types e ON e.id=f.definition_id
              SET f.definition_id=:definition_id,f.field_key=:field_key,f.label=:label,f.field_type=:field_type,
-                 f.required=:required,f.sort_order=:sort_order,f.options_json=:options_json,f.active=:active,
+                 f.required=:required,f.sort_order=:sort_order,f.options_json=:options_json,f.visibility_json=:visibility_json,f.active=:active,
                  f.updated_at=NOW(),f.updated_by=:user_id
              WHERE f.id=:id AND f.module="dutybook_event" AND e.location_id=:location_id'
         );
