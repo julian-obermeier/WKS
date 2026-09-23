@@ -57,6 +57,16 @@
 </div>
 <?php endif; ?>
 
+<?php if (can('messages.read') || can('notifications.read')): ?>
+<div class="panel">
+    <div class="panel-header"><div><h2>Informationen</h2><p>Mitteilungen und interne Benachrichtigungen</p></div></div>
+    <div class="quick-grid">
+        <?php if (can('messages.read')): ?><a class="quick-card" href="<?= e(url('announcements')) ?>"><span>☷</span><strong>Mitteilungen</strong><small>Veröffentlichte Informationen und Lesebestätigungen</small></a><?php endif; ?>
+        <?php if (can('notifications.read')): ?><a class="quick-card" href="<?= e(url('notifications')) ?>"><span>◉</span><strong>Benachrichtigungen</strong><small>Ereignisbezogene interne Hinweise</small></a><?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (can('system.users.manage') || can('system.locations.manage') || can('system.audit.view')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Administration</h2><p>Grundkonfiguration des Systems</p></div></div>

@@ -73,6 +73,12 @@ if ($user && active_location_id()) {
                     <?php if (can('house_bans.read')): ?>
                         <a href="<?= e(url('house-bans')) ?>" class="nav-link">⊘ <span>Hausverbote</span></a>
                     <?php endif; ?>
+                    <?php if (can('messages.read')): ?>
+                        <a href="<?= e(url('announcements')) ?>" class="nav-link">☷ <span>Mitteilungen</span></a>
+                    <?php endif; ?>
+                    <?php if (can('notifications.read')): ?>
+                        <a href="<?= e(url('notifications')) ?>" class="nav-link">◉ <span>Benachrichtigungen</span></a>
+                    <?php endif; ?>
                     <?php if (can('system.users.manage') || can('system.roles.manage') || can('system.locations.manage') || can('system.audit.view') || can('system.settings.manage')): ?>
                         <div class="nav-section">Administration</div>
                     <?php endif; ?>
@@ -94,8 +100,15 @@ if ($user && active_location_id()) {
                     <?php if (can('system.audit.view')): ?>
                         <a href="<?= e(url('admin/audit')) ?>" class="nav-link">≡ <span>Audit-Log</span></a>
                     <?php endif; ?>
+                    <?php if (can('messages.manage')): ?>
+                        <a href="<?= e(url('announcements/manage')) ?>" class="nav-link">✎ <span>Mitteilungen verwalten</span></a>
+                    <?php endif; ?>
+                    <?php if (can('system.trash.manage')): ?>
+                        <a href="<?= e(url('admin/trash')) ?>" class="nav-link">⌫ <span>Papierkorb</span></a>
+                    <?php endif; ?>
                     <?php if (can('system.settings.manage')): ?>
                         <a href="<?= e(url('admin/settings/security')) ?>" class="nav-link">⚙ <span>Sicherheit</span></a>
+                        <a href="<?= e(url('admin/settings/valuables')) ?>" class="nav-link">▣ <span>Wertsachen-Einstellungen</span></a>
                     <?php endif; ?>
                 </nav>
                 <div class="sidebar-footer">Version <?= e(config('app.version', 'dev')) ?></div>
