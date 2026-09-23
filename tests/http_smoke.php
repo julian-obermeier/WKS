@@ -83,8 +83,24 @@ $assert($selection['status']===200&&str_contains($selection['body'],'Standort au
 $selected=$admin('/location/select','POST',['_token'=>$token($selection['body']),'location_id'=>$gi]);
 $assert($selected['status']===302,'admin can select assigned Gießen site');
 
+$adminId=(int)$pdo->query("SELECT id FROM users WHERE username='integration.admin' LIMIT 1")->fetchColumn();
+$pdo->prepare('DELETE FROM user_release_views WHERE user_id=:user_id')->execute(['user_id'=>$adminId]);
+$pdo->prepare('UPDATE users SET last_seen_release_version=NULL,last_seen_release_at=NULL WHERE id=:user_id')->execute(['user_id'=>$adminId]);
+
 $dashboard=$admin('/');
 $assert($dashboard['status']===200&&str_contains($dashboard['body'],'Dashboard'),'authenticated dashboard renders');
+$assert(str_contains($dashboard['body'],'data-release-modal'),'latest release modal is shown when unread');
+$currentVersion=trim((string)file_get_contents(BASE_PATH.'/VERSION'));
+$seen=$admin('/whats-new/'.rawurlencode($currentVersion).'/seen','POST',['_token'=>$token($dashboard['body'])]);
+$assert($seen['status']===302,'release seen action redirects after POST');
+$viewStmt=$pdo->prepare('SELECT COUNT(*) FROM user_release_views WHERE user_id=:user_id AND version=:version');
+$viewStmt->execute(['user_id'=>$adminId,'version'=>$currentVersion]);
+$assert((int)$viewStmt->fetchColumn()===1,'release seen action persists user_release_views');
+$seenVersion=$pdo->prepare('SELECT last_seen_release_version FROM users WHERE id=:user_id');
+$seenVersion->execute(['user_id'=>$adminId]);
+$assert((string)$seenVersion->fetchColumn()===$currentVersion,'release seen action persists version on user');
+$dashboardAfterSeen=$admin('/');
+$assert($dashboardAfterSeen['status']===200&&!str_contains($dashboardAfterSeen['body'],'data-release-modal'),'release modal stays closed after marking latest version seen');
 foreach(['/dutybook','/special-reports','/valuables','/house-bans','/search','/statistics','/announcements','/notifications','/admin/system/status','/admin/audit','/admin/updates'] as $path){
     $response=$admin($path);
     $assert($response['status']===200,'admin module responds 200: '.$path);
