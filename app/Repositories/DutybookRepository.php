@@ -374,6 +374,7 @@ final class DutybookRepository
         }
         if(!empty($filters['staff_id'])){$where[]='EXISTS (SELECT 1 FROM dutybook_entry_staff es WHERE es.entry_id=e.id AND es.user_id=:staff_id)';$params['staff_id']=(int)$filters['staff_id'];}
         if(!empty($filters['attachments']))$where[]='EXISTS (SELECT 1 FROM attachments a WHERE a.module="dutybook" AND a.record_id=e.id AND a.deleted_at IS NULL)';
+        if(!empty($filters['automatic']))$where[]='e.is_automatic=1';
         if(!empty($filters['q'])){$where[]='(e.facts LIKE :q_facts OR e.measures_text LIKE :q_measures OR e.result_text LIKE :q_result)';$like='%'.$filters['q'].'%';$params['q_facts']=$like;$params['q_measures']=$like;$params['q_result']=$like;}
 
         $clause=implode(' AND ',$where);
