@@ -98,7 +98,7 @@ final class DutybookController
             'status'=>(string)$request->query('status',''),'shift_id'=>(int)$request->query('shift_id',0),
             'category_id'=>(int)$request->query('category_id',0),'event_type_id'=>(int)$request->query('event_type_id',0),
             'creator_id'=>(int)$request->query('creator_id',0),'staff_id'=>(int)$request->query('staff_id',0),
-            'attachments'=>(int)$request->query('attachments',0),'q'=>trim((string)$request->query('q',''))
+            'attachments'=>(int)$request->query('attachments',0),'automatic'=>(int)$request->query('automatic',0),'q'=>trim((string)$request->query('q',''))
         ];
         $result=(new DutybookRepository())->search((int)active_location_id(),$filters,max(1,(int)$request->query('page',1)));
         $master=new MasterDataRepository();$locationId=(int)active_location_id();
