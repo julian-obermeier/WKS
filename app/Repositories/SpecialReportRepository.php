@@ -15,29 +15,34 @@ final class SpecialReportRepository
         if($activeOnly)$sql.=' AND active=1';
         $sql.=' ORDER BY sort_order,name';
         $stmt=Database::connection()->prepare($sql);$stmt->execute(['location_id'=>$locationId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$row)$this->hydrateType($row);
+        return $rows;
     }
 
     public function type(int $id,int $locationId): ?array
     {
         $stmt=Database::connection()->prepare('SELECT * FROM special_report_types WHERE id=:id AND location_id=:location_id LIMIT 1');
         $stmt->execute(['id'=>$id,'location_id'=>$locationId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC)?:null;
+        $row=$stmt->fetch(PDO::FETCH_ASSOC)?:null;
+        if($row)$this->hydrateType($row);
+        return $row;
     }
 
     public function saveType(?int $id,int $locationId,array $data,int $userId): int
     {
+        $data['force_requirements_json']=(string)($data['force_requirements_json']??'{}');
         if($id===null){
             $stmt=Database::connection()->prepare(
-                'INSERT INTO special_report_types (location_id,name,code,sort_order,active,force_section_enabled,created_at,updated_at,created_by,updated_by)
-                 VALUES (:location_id,:name,:code,:sort_order,:active,:force_section_enabled,NOW(),NOW(),:created_by,:updated_by)'
+                'INSERT INTO special_report_types (location_id,name,code,sort_order,active,force_section_enabled,force_requirements_json,created_at,updated_at,created_by,updated_by)
+                 VALUES (:location_id,:name,:code,:sort_order,:active,:force_section_enabled,:force_requirements_json,NOW(),NOW(),:created_by,:updated_by)'
             );
             $stmt->execute($data+['location_id'=>$locationId,'created_by'=>$userId,'updated_by'=>$userId]);
             return (int)Database::connection()->lastInsertId();
         }
         $stmt=Database::connection()->prepare(
             'UPDATE special_report_types SET name=:name,code=:code,sort_order=:sort_order,active=:active,
-             force_section_enabled=:force_section_enabled,updated_at=NOW(),updated_by=:user_id
+             force_section_enabled=:force_section_enabled,force_requirements_json=:force_requirements_json,updated_at=NOW(),updated_by=:user_id
              WHERE id=:id AND location_id=:location_id'
         );
         $stmt->execute($data+['id'=>$id,'location_id'=>$locationId,'user_id'=>$userId]);
@@ -278,5 +283,11 @@ final class SpecialReportRepository
              WHERE {$clause} ORDER BY r.incident_date DESC,r.report_number DESC LIMIT {$perPage} OFFSET {$offset}"
         );$s->execute($params);
         return ['items'=>$s->fetchAll(PDO::FETCH_ASSOC),'total'=>$total,'page'=>$page,'pages'=>max(1,(int)ceil($total/$perPage))];
+    }
+    private function hydrateType(array &$row): void
+    {
+        $decoded=$row['force_requirements_json']??null;
+        $requirements=is_string($decoded)&&$decoded!==''?json_decode($decoded,true):[];
+        $row['force_requirements']=is_array($requirements)?$requirements:[];
     }
 }

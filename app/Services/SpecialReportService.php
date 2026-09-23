@@ -42,7 +42,7 @@ final class SpecialReportService
                 'edit_locked_at'=>(new DateTimeImmutable())->modify('+'.max(0,$editMinutes).' minutes')->format('Y-m-d H:i:s'),
                 'created_by'=>$userId,'updated_by'=>$userId
             ]);
-            $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled']);
+            $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled'],(array)($type['force_requirements']??[]));
             $pdo->commit();
 
             if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments']);
@@ -239,7 +239,7 @@ final class SpecialReportService
         ];
     }
 
-    private function replaceRelations(SpecialReportRepository $repo,int $id,array $input,array $dynamic,bool $forceEnabled): array
+    private function replaceRelations(SpecialReportRepository $repo,int $id,array $input,array $dynamic,bool $forceEnabled,array $forceRequirements=[]): array
     {
         $repo->syncStaff($id,(array)($input['staff_ids']??[]));$repo->replacePeople($id,$this->people((array)($input['people']??[])));
         $witnessIds=$repo->replaceWitnesses($id,$this->witnesses((array)($input['witnesses']??[])));$repo->replaceExternal($id,$this->external((array)($input['external']??[])));
@@ -248,7 +248,7 @@ final class SpecialReportService
             'medical_care'=>$this->nullable($inj['medical_care']??null),'treating_entity'=>$this->nullable($inj['treating_entity']??null),
             'treated_at'=>$this->dateTime((string)($inj['treated_at']??''))
         ]);
-        $repo->replaceForceActions($id,$forceEnabled?$this->forceActions((array)($input['force_actions']??[])):[]);
+        $repo->replaceForceActions($id,$forceEnabled?$this->forceActions((array)($input['force_actions']??[]),$forceRequirements):[]);
         $repo->saveDynamicValues($id,$dynamic);
         return $witnessIds;
     }
@@ -274,12 +274,27 @@ final class SpecialReportService
             'feedback'=>$this->nullable($x['feedback']??null),'reference_number'=>$this->nullable($x['reference_number']??null)
         ];if(array_filter($row,static fn($v)=>$v!==null))$out[]=$row;}return $out;
     }
-    private function forceActions(array $rows): array
+    private function forceActions(array $rows,array $requirements=[]): array
     {
-        $out=[];foreach($rows as $x){if(!is_array($x))continue;$type=trim((string)($x['action_type']??''));if($type==='')continue;$out[]=[
-            'action_type'=>$type,'started_at'=>$this->dateTime((string)($x['started_at']??'')),'ended_at'=>$this->dateTime((string)($x['ended_at']??'')),
-            'justification'=>$this->nullable($x['justification']??null),'result_text'=>$this->nullable($x['result_text']??null),'staff_ids'=>(array)($x['staff_ids']??[])
-        ];}return $out;
+        $labels=['action_type'=>'Art der Maßnahme','started_at'=>'Beginn','ended_at'=>'Ende','staff_ids'=>'beteiligte Mitarbeiter','justification'=>'Begründung','result_text'=>'Ergebnis'];
+        $required=array_keys(array_filter($requirements,static fn($value):bool=>(bool)$value));$out=[];
+        foreach($rows as $x){
+            if(!is_array($x))continue;
+            $type=trim((string)($x['action_type']??''));$start=$this->dateTime((string)($x['started_at']??''));$end=$this->dateTime((string)($x['ended_at']??''));
+            $justification=$this->nullable($x['justification']??null);$result=$this->nullable($x['result_text']??null);
+            $staffIds=array_values(array_unique(array_filter(array_map('intval',(array)($x['staff_ids']??[])),static fn(int $id):bool=>$id>0)));
+            $values=['action_type'=>$type,'started_at'=>$start,'ended_at'=>$end,'staff_ids'=>$staffIds,'justification'=>$justification,'result_text'=>$result];
+            $hasData=$type!==''||$start!==null||$end!==null||$staffIds!==[]||$justification!==null||$result!==null;
+            if(!$hasData)continue;
+            foreach($required as $field){
+                $value=$values[$field]??null;
+                if($value===null||$value===''||$value===[])throw new HttpException(422,'Im Abschnitt Zwangsmaßnahmen ist „'.($labels[$field]??$field).'“ erforderlich.');
+            }
+            if($start&&$end&&strtotime($end)<strtotime($start))throw new HttpException(422,'Bei Zwangsmaßnahmen darf das Ende nicht vor dem Beginn liegen.');
+            $out[]=['action_type'=>$type,'started_at'=>$start,'ended_at'=>$end,'justification'=>$justification,'result_text'=>$result,'staff_ids'=>$staffIds];
+        }
+        if($out===[]&&$required!==[])throw new HttpException(422,'Für diese Einsatzart muss mindestens eine Zwangsmaßnahme vollständig erfasst werden.');
+        return $out;
     }
 
     private function createDutybookLink(int $locationId,int $reportId,int $sourceId,string $typeName,int $year,int $number,string $occurredAt): int
