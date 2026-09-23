@@ -31,10 +31,12 @@ final class ValuablesService
         $containers=$this->validateContainers($locationId,(array)($input['containers']??[]));
         if($containers===[])throw new HttpException(422,'Mindestens ein Behältnis ist erforderlich.');
         $storedAt=$this->dateTime((string)($input['stored_at']??date('Y-m-d H:i:s')),true);
-        $correctionParent=($p=(int)($input['correction_parent_id']??0))>0?$p:null;
+        $correctionParent=($p=(int)($input['correction_parent_id']??0))>0?$p:null;$parent=null;$correctionReason=null;
         if($correctionParent){
             $parent=$repo->find($correctionParent,$locationId);
             if(!$parent||$parent['status']!=='released')throw new HttpException(422,'Korrekturfolge ist nur zu einem vollständig ausgelagerten Vorgang möglich.');
+            $correctionReason=trim((string)($input['correction_reason']??''));
+            if($correctionReason==='')throw new HttpException(422,'Für eine Korrekturfolge ist ein dokumentierter Korrekturgrund erforderlich.');
         }
 
         $pdo=Database::connection();$pdo->beginTransaction();
@@ -75,7 +77,13 @@ final class ValuablesService
                 }
             }
 
-            if($correctionParent)$repo->addHistory($recordId,'correction_parent_id',null,$correctionParent,$userId,'Neuer Vorgang als Korrekturfolge');
+            if($correctionParent){
+                $repo->addHistory($recordId,'correction_parent_id',null,$correctionParent,$userId,'Neuer Vorgang als Korrekturfolge');
+                $repo->addHistory($correctionParent,'correction_child_id',null,$recordId,$userId,'Korrekturfolge mit neuer Verwahrnummer '.$number);
+                $repo->addAddendum(
+                    $correctionParent,'Fehlerhafte Auslagerung / Korrekturfolge',(string)$correctionReason,$userId,$recordId
+                );
+            }
             $this->autoDutybook($locationId,$recordId,$number,'stored',$storedAt,$person);
             $pdo->commit();
 
@@ -159,6 +167,21 @@ final class ValuablesService
         $text=trim($text);if($text==='')throw new HttpException(422,'Die Notiz darf nicht leer sein.');
         $id=$repo->addNote($recordId,$text,(int)Auth::id());
         (new AuditService())->log('valuables_note_added','valuables',(string)$recordId,null,['note_id'=>$id],[],null,Auth::id(),$locationId);
+    }
+
+    public function addAddendum(int $locationId,int $recordId,string $reason,string $text): void
+    {
+        $repo=new ValuablesRepository();$record=$repo->find($recordId,$locationId);
+        if(!$record)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+        if($record['status']!=='released')throw new HttpException(422,'Dokumentierte Nachträge sind für vollständig ausgelagerte Vorgänge vorgesehen. Während der Verwahrung verwenden Sie interne Notizen.');
+        $reason=trim($reason);$text=trim($text);
+        if($reason===''||$text==='')throw new HttpException(422,'Nachtragsgrund und Nachtragstext sind erforderlich.');
+        if(mb_strlen($reason)>255)throw new HttpException(422,'Der Nachtragsgrund darf höchstens 255 Zeichen lang sein.');
+        $id=$repo->addAddendum($recordId,$reason,$text,(int)Auth::id());
+        (new AuditService())->log(
+            'valuables_addendum_created','valuables',(string)$recordId,null,
+            ['addendum_id'=>$id,'reason'=>$reason],[],null,Auth::id(),$locationId
+        );
     }
 
     public function longTermDays(): int
