@@ -11,7 +11,17 @@ final class DynamicFormService
 
     public function validateDutybookValues(int $eventTypeId,array $input): array
     {
-        $fields=(new MasterDataRepository())->dynamicFields('dutybook_event',$eventTypeId);
+        return $this->validate('dutybook_event',$eventTypeId,$input);
+    }
+
+    public function validateSpecialReportValues(int $reportTypeId,array $input): array
+    {
+        return $this->validate('special_report_type',$reportTypeId,$input);
+    }
+
+    private function validate(string $module,int $definitionId,array $input): array
+    {
+        $fields=(new MasterDataRepository())->dynamicFields($module,$definitionId);
         $values=[];
         $errors=[];
 
