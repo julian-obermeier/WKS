@@ -9,7 +9,7 @@
 <input type="date" name="date" value="<?= e($date) ?>"><button class="button secondary" type="submit">Tag öffnen</button>
 </form>
 <a class="button ghost" href="<?= e(url('dutybook/search')) ?>">Suche</a>
-<?php if(can('dutybook.export')):?><a class="button ghost" href="<?= e(url('dutybook-export.pdf?date='.$date)) ?>">PDF</a><a class="button ghost" href="<?= e(url('dutybook-export.csv?date='.$date)) ?>">CSV</a><a class="button ghost" target="_blank" href="<?= e(url('dutybook-print?date='.$date)) ?>">Druckansicht</a><?php endif;?>
+<?php if(can('dutybook.export')):?><a class="button ghost" href="<?= e(url('dutybook-export.pdf?date='.$date)) ?>">PDF</a><a class="button ghost" href="<?= e(url('dutybook-export.csv?date='.$date)) ?>">CSV</a><a class="button ghost" target="_blank" href="<?= e(url('dutybook-print?date='.$date)) ?>">Druckansicht</a><?php if($day&&$day['archived_at']):?><a class="button secondary" href="<?= e(url('dutybook/archive/download?date='.$date)) ?>">Archiv-PDF</a><?php elseif($day):?><form method="post" action="<?= e(url('dutybook/archive')) ?>" class="inline-form"><?= csrf_field() ?><input type="hidden" name="date" value="<?= e($date) ?>"><button class="button secondary" type="submit">PDF-Archivstand erzeugen</button></form><?php endif;?><?php endif;?>
 </div>
 
 <?php if($current): ?>
@@ -40,6 +40,7 @@
 </div>
 <?php endif;?>
 
+<?php if($day&&$day['archived_at']):?><div class="notice success"><strong>Archivstand vorhanden:</strong> <?= e(format_datetime($day['archived_at'])) ?> · SHA-256 <?= e(substr((string)$day['archive_hash'],0,16)) ?>…</div><?php endif;?>
 <div class="panel">
 <div class="panel-header"><div><h2>Einträge</h2><p><?= count($entries) ?> Vorgänge am <?= e((new DateTimeImmutable($date))->format('d.m.Y')) ?></p></div></div>
 <div class="table-wrap"><table>

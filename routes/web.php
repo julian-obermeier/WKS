@@ -90,6 +90,8 @@ $router->post('/dutybook/{id}/addendum', [DutybookController::class, 'addendum']
 $router->get('/dutybook-export.pdf', [DutybookController::class, 'exportPdf'], ['auth','password','location','permission:dutybook.export']);
 $router->get('/dutybook-export.csv', [DutybookController::class, 'exportCsv'], ['auth','password','location','permission:dutybook.export']);
 $router->get('/dutybook-print', [DutybookController::class, 'printDay'], ['auth','password','location','permission:dutybook.export']);
+$router->post('/dutybook/archive', [DutybookController::class, 'archive'], ['auth','password','location','permission:dutybook.export']);
+$router->get('/dutybook/archive/download', [DutybookController::class, 'archiveDownload'], ['auth','password','location','permission:dutybook.export']);
 
 $router->post('/shift/accept', [ShiftController::class, 'accept'], ['auth','password','location','permission:dutybook.create']);
 $router->post('/shift/{id}/end', [ShiftController::class, 'end'], ['auth','password','location','permission:dutybook.create']);

@@ -386,4 +386,27 @@ final class DutybookRepository
         $stmt->execute($params);
         return ['items'=>$stmt->fetchAll(PDO::FETCH_ASSOC),'total'=>$total,'page'=>$page,'pages'=>max(1,(int)ceil($total/$perPage))];
     }
+
+    public function archiveDay(int $locationId,string $dutyDate,string $relativePath,string $hash,int $userId): void
+    {
+        $stmt=Database::connection()->prepare(
+            'UPDATE dutybook_days SET archived_at=NOW(),archived_by=:user_id,archive_file=:path,archive_hash=:hash,updated_at=NOW()
+             WHERE location_id=:location_id AND duty_date=:duty_date AND archived_at IS NULL'
+        );
+        $stmt->execute(['user_id'=>$userId,'path'=>$relativePath,'hash'=>$hash,'location_id'=>$locationId,'duty_date'=>$dutyDate]);
+        if($stmt->rowCount()!==1)throw new \WKS\Core\HttpException(409,'Für diesen Arbeitstag wurde bereits ein unveränderlicher Archivstand erzeugt.');
+    }
+
+    public function archivedDay(int $locationId,string $dutyDate): ?array
+    {
+        $stmt=Database::connection()->prepare(
+            'SELECT d.*,l.name AS location_name,CONCAT(u.first_name," ",u.last_name) AS archived_by_name
+             FROM dutybook_days d JOIN locations l ON l.id=d.location_id
+             LEFT JOIN users u ON u.id=d.archived_by
+             WHERE d.location_id=:location_id AND d.duty_date=:duty_date AND d.archived_at IS NOT NULL LIMIT 1'
+        );
+        $stmt->execute(['location_id'=>$locationId,'duty_date'=>$dutyDate]);
+        return $stmt->fetch(PDO::FETCH_ASSOC)?:null;
+    }
+
 }

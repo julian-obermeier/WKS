@@ -174,4 +174,60 @@ final class DutybookController
         return new Response($pdf,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="'.$title.'.pdf"']);
     }
 
+
+    public function archive(Request $request): Response
+    {
+        $date=(string)$request->post('date',date('Y-m-d'));
+        if(!preg_match('/^\d{4}-\d{2}-\d{2}$/',$date))throw new HttpException(422,'Ungültiges Dienstbuchdatum.');
+        $locationId=(int)active_location_id();$repo=new DutybookRepository();
+        if($repo->archivedDay($locationId,$date)){
+            flash('info','Für diesen Tag existiert bereits ein unveränderlicher Archivstand.');
+            return Response::redirect(url('dutybook?date='.$date));
+        }
+        $day=$repo->day($locationId,$date);
+        if(!$day){
+            flash('error','Für diesen Tag existiert noch kein Tagesdienstbuch.');
+            return Response::redirect(url('dutybook?date='.$date));
+        }
+        $entries=$repo->entriesForDay($locationId,$date);$rows=[];
+        foreach($entries as $e){
+            $rows[]=date('H:i',strtotime((string)$e['occurred_at'])).' · '.($e['shift_name']??'–').' · '.($e['event_type_name']??'Automatisch').' · '.$e['facts']
+                .($e['measures_text']?"\nMaßnahmen: ".$e['measures_text']:'').($e['result_text']?"\nErgebnis: ".$e['result_text']:'');
+        }
+        $title=$date.'_Dienstbuch_'.$day['location_name'];
+        $pdf=(new DocumentGeneratorService())->pdfForTemplate('dutybook',$title,['Einträge'=>$rows]);
+        $year=substr($date,0,4);$month=substr($date,5,2);
+        $dir=BASE_PATH.'/storage/generated/dutybook/'.$year.'/'.$month;
+        if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new \RuntimeException('Archivverzeichnis konnte nicht angelegt werden.');
+        $safeLocation=preg_replace('/[^A-Za-z0-9_-]+/u','_',str_replace(['ä','ö','ü','Ä','Ö','Ü','ß'],['ae','oe','ue','Ae','Oe','Ue','ss'],$day['location_name']))?:'Standort';
+        $relative='dutybook/'.$year.'/'.$month.'/'.$date.'_Dienstbuch_'.$safeLocation.'.pdf';
+        $absolute=BASE_PATH.'/storage/generated/'.$relative;
+        if(is_file($absolute))throw new HttpException(409,'Die Archivdatei existiert bereits und wird aus Sicherheitsgründen nicht überschrieben.');
+        if(file_put_contents($absolute,$pdf,LOCK_EX)===false)throw new \RuntimeException('Archiv-PDF konnte nicht geschrieben werden.');
+        @chmod($absolute,0440);$hash=hash_file('sha256',$absolute);
+        try{
+            $repo->archiveDay($locationId,$date,$relative,$hash,(int)Auth::id());
+        }catch(\Throwable $e){
+            @chmod($absolute,0640);@unlink($absolute);throw $e;
+        }
+        (new \WKS\Services\AuditService())->log('dutybook_archived','dutybook',$date,null,['archive_file'=>$relative,'sha256'=>$hash,'entries'=>count($entries)],[],$request);
+        flash('success','Unveränderlicher PDF-Archivstand wurde erzeugt.');
+        return Response::redirect(url('dutybook?date='.$date));
+    }
+
+    public function archiveDownload(Request $request): Response
+    {
+        $date=(string)$request->query('date',date('Y-m-d'));$record=(new DutybookRepository())->archivedDay((int)active_location_id(),$date);
+        if(!$record||!$record['archive_file'])throw new HttpException(404,'Kein Archivstand für diesen Tag vorhanden.');
+        $root=realpath(BASE_PATH.'/storage/generated');$path=realpath(BASE_PATH.'/storage/generated/'.$record['archive_file']);
+        if(!$root||!$path||!str_starts_with($path,$root.DIRECTORY_SEPARATOR)||!is_file($path))throw new HttpException(404,'Archivdatei nicht gefunden.');
+        $hash=hash_file('sha256',$path);if(!hash_equals((string)$record['archive_hash'],$hash))throw new HttpException(500,'Integritätsprüfung der Archivdatei ist fehlgeschlagen.');
+        (new \WKS\Services\AuditService())->log('dutybook_archive_downloaded','dutybook',$date,null,['sha256'=>$hash],[],$request);
+        return new Response((string)file_get_contents($path),200,[
+            'Content-Type'=>'application/pdf','Content-Length'=>(string)filesize($path),
+            'Content-Disposition'=>'attachment; filename="'.basename((string)$record['archive_file']).'"',
+            'X-Content-Type-Options'=>'nosniff'
+        ]);
+    }
+
 }
