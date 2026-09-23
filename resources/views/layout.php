@@ -67,6 +67,9 @@ if ($user && active_location_id()) {
                     <?php if (can('special_reports.read')): ?>
                         <a href="<?= e(url('special-reports')) ?>" class="nav-link">▧ <span>Sonderberichte</span></a>
                     <?php endif; ?>
+                    <?php if (can('valuables.read')): ?>
+                        <a href="<?= e(url('valuables')) ?>" class="nav-link">▣ <span>Wertsachen</span></a>
+                    <?php endif; ?>
                     <?php if (can('system.users.manage') || can('system.roles.manage') || can('system.locations.manage') || can('system.audit.view') || can('system.settings.manage')): ?>
                         <div class="nav-section">Administration</div>
                     <?php endif; ?>

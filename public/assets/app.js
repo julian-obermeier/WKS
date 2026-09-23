@@ -62,4 +62,56 @@
             event.returnValue = '';
         });
     }
+
+    const syncContainerRow = (row) => {
+        const type = row.querySelector('[data-container-type]');
+        const cassetteFields = row.querySelector('[data-cassette-fields]');
+        if (!type || !cassetteFields) return;
+        const isCassette = type.value === 'cassette';
+        cassetteFields.hidden = !isCassette;
+        cassetteFields.querySelectorAll('select,input').forEach((field) => {
+            field.disabled = !isCassette;
+            if (isCassette && field.dataset.cassetteRequired === '1') field.required = true;
+            else field.required = false;
+        });
+    };
+    const syncAllContainers = () => document.querySelectorAll('[data-container-row]').forEach(syncContainerRow);
+    document.addEventListener('change', (event) => {
+        if (event.target.matches('[data-container-type]')) syncContainerRow(event.target.closest('[data-container-row]'));
+    });
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('[data-repeat-add]')) setTimeout(syncAllContainers, 0);
+    });
+    syncAllContainers();
+
+    let sealTimer = null;
+    document.addEventListener('input', (event) => {
+        const input = event.target.closest('[data-seal-input]');
+        if (!input) return;
+        const output = input.parentElement.querySelector('[data-seal-result]');
+        if (!output) return;
+        clearTimeout(sealTimer);
+        const value = input.value.trim();
+        output.textContent = '';
+        output.className = 'field-hint';
+        if (!/^\d+$/.test(value)) return;
+        sealTimer = setTimeout(async () => {
+            try {
+                const endpoint = input.dataset.sealEndpoint;
+                const response = await fetch(endpoint + '?seal=' + encodeURIComponent(value), {headers:{'Accept':'application/json'}, credentials:'same-origin'});
+                const data = await response.json();
+                output.textContent = data.available ? '✓ ' + data.message : '⚠ ' + data.message + (data.custody_number ? ' · Verwahrnr. ' + data.custody_number : '');
+                output.className = 'field-hint ' + (data.available ? 'ok' : 'error');
+            } catch (_) {
+                output.textContent = 'Live-Prüfung derzeit nicht verfügbar – serverseitige Prüfung erfolgt beim Speichern.';
+                output.className = 'field-hint';
+            }
+        }, 350);
+    });
+
+    document.addEventListener('change', (event) => {
+        if (!event.target.matches('[data-receiver-subject]')) return;
+        const foreign = document.querySelector('[data-foreign-receiver]');
+        if (foreign) foreign.hidden = event.target.value === '1';
+    });
 })();

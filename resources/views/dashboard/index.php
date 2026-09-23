@@ -35,6 +35,18 @@
 </div>
 <?php endif; ?>
 
+<?php if (can('valuables.read')): ?>
+<div class="panel">
+    <div class="panel-header"><div><h2>Wertsachen</h2><p>Sichere Verwahrung, Kassetten und Siegel</p></div></div>
+    <div class="quick-grid">
+        <a class="quick-card" href="<?= e(url('valuables')) ?>"><span>▣</span><strong>Aktuelle Verwahrung</strong><small>Eingelagerte Vorgänge und Lagerorte</small></a>
+        <?php if (can('valuables.store')): ?><a class="quick-card" href="<?= e(url('valuables/create')) ?>"><span>＋</span><strong>Einlagern</strong><small>Neuen Verwahrvorgang erfassen</small></a><?php endif; ?>
+        <a class="quick-card" href="<?= e(url('valuables/cassettes')) ?>"><span>▦</span><strong>Kassetten</strong><small>Frei-/Belegt-Übersicht 1–100</small></a>
+        <a class="quick-card" href="<?= e(url('valuables/long-term')) ?>"><span>◷</span><strong>Langzeitverwahrung</strong><small>Vorgänge über dem Schwellenwert</small></a>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (can('system.users.manage') || can('system.locations.manage') || can('system.audit.view')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Administration</h2><p>Grundkonfiguration des Systems</p></div></div>

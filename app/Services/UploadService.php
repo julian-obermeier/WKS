@@ -37,13 +37,18 @@ final class UploadService
         $size=(int)($file['size']??0);
         if($size<=0||$size>$maxBytes) throw new HttpException(422,'Ein Anhang ist leer oder überschreitet die maximal erlaubte Dateigröße.');
 
+        $allowed=self::DEFAULT_MIMES;
+        if(in_array($module,['valuables','house_bans','messages'],true)){
+            $allowed=array_intersect_key(self::DEFAULT_MIMES,array_flip(['image/jpeg','image/png','application/pdf']));
+        }
+
         $finfo=new finfo(FILEINFO_MIME_TYPE);
         $mime=(string)$finfo->file((string)$file['tmp_name']);
-        if(!isset(self::DEFAULT_MIMES[$mime])) throw new HttpException(422,'Dieser Dateityp ist nicht freigegeben.');
+        if(!isset($allowed[$mime])) throw new HttpException(422,'Dieser Dateityp ist für dieses Modul nicht freigegeben.');
 
         $original=basename((string)($file['name']??'datei'));
         $extension=strtolower((string)pathinfo($original,PATHINFO_EXTENSION));
-        if(!in_array($extension,self::DEFAULT_MIMES[$mime],true)) throw new HttpException(422,'Dateiendung und Dateityp stimmen nicht überein.');
+        if(!in_array($extension,$allowed[$mime],true)) throw new HttpException(422,'Dateiendung und Dateityp stimmen nicht überein.');
 
         $subdir=$module.'/'.date('Y').'/'.date('m');
         $dir=BASE_PATH.'/storage/uploads/'.$subdir;
