@@ -66,8 +66,9 @@ final class ValuablesRepository
     public function sealUsage(string $sealNumber): ?array
     {
         $stmt=Database::connection()->prepare(
-            'SELECT s.*,r.custody_number FROM seal_usages s
-             JOIN valuables_records r ON r.id=s.valuables_record_id
+            'SELECT s.*,COALESCE(r.custody_number,s.custody_number_snapshot) AS custody_number
+             FROM seal_usages s
+             LEFT JOIN valuables_records r ON r.id=s.valuables_record_id
              WHERE s.seal_number=:seal LIMIT 1'
         );
         $stmt->execute(['seal'=>$sealNumber]);
