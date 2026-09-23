@@ -252,28 +252,28 @@ final class ValuablesRepository
 
     public function longTerm(int $locationId,int $days): array
     {
+        $days=max(0,$days);
         $stmt=Database::connection()->prepare(
             'SELECT r.*,TIMESTAMPDIFF(DAY,r.stored_at,NOW()) AS storage_days,
                     (SELECT COUNT(*) FROM valuables_containers vc WHERE vc.valuables_record_id=r.id) AS container_count
              FROM valuables_records r
              WHERE r.location_id=:location_id AND r.status="stored" AND r.deleted_at IS NULL
-               AND r.stored_at <= DATE_SUB(NOW(),INTERVAL :days DAY)
+               AND r.stored_at <= DATE_SUB(NOW(),INTERVAL '.$days.' DAY)
              ORDER BY r.stored_at,r.custody_number'
         );
-        $stmt->bindValue(':location_id',$locationId,PDO::PARAM_INT);
-        $stmt->bindValue(':days',max(0,$days),PDO::PARAM_INT);
-        $stmt->execute();return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt->execute(['location_id'=>$locationId]);return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function counts(int $locationId,int $longTermDays): array
     {
+        $days=max(0,$longTermDays);
         $stmt=Database::connection()->prepare(
             'SELECT
                 SUM(CASE WHEN status="stored" AND deleted_at IS NULL THEN 1 ELSE 0 END) AS stored_count,
-                SUM(CASE WHEN status="stored" AND deleted_at IS NULL AND stored_at<=DATE_SUB(NOW(),INTERVAL :days DAY) THEN 1 ELSE 0 END) AS long_term_count
+                SUM(CASE WHEN status="stored" AND deleted_at IS NULL AND stored_at<=DATE_SUB(NOW(),INTERVAL '.$days.' DAY) THEN 1 ELSE 0 END) AS long_term_count
              FROM valuables_records WHERE location_id=:location_id'
         );
-        $stmt->bindValue(':days',max(0,$longTermDays),PDO::PARAM_INT);$stmt->bindValue(':location_id',$locationId,PDO::PARAM_INT);$stmt->execute();
+        $stmt->execute(['location_id'=>$locationId]);
         $row=$stmt->fetch(PDO::FETCH_ASSOC)?:['stored_count'=>0,'long_term_count'=>0];
         $c=Database::connection()->prepare('SELECT COUNT(*) FROM cassette_assignments WHERE location_id=:location_id');$c->execute(['location_id'=>$locationId]);
         $row['occupied_cassettes']=(int)$c->fetchColumn();return $row;
@@ -289,7 +289,7 @@ final class ValuablesRepository
             'stored_from'=>'r.stored_at>=:stored_from','stored_to'=>'r.stored_at<=:stored_to',
             'released_from'=>'r.released_at>=:released_from','released_to'=>'r.released_at<=:released_to'
         ] as $key=>$condition){
-            if($filters[$key]??''!==''){
+            if(($filters[$key]??'')!==''){
                 $where[]=$condition;
                 $v=$filters[$key];
                 if(in_array($key,['first_name','last_name','internal_identifier'],true))$v='%'.$v.'%';
