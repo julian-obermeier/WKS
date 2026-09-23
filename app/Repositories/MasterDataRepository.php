@@ -294,7 +294,7 @@ final class MasterDataRepository
                 if($measureId>0)$stmt->execute(['event_type_id'=>$eventTypeId,'measure_id'=>$measureId]);
             }
             $pdo->commit();
-        }catch(\\Throwable $e){$pdo->rollBack();throw $e;}
+        }catch(\Throwable $e){$pdo->rollBack();throw $e;}
     }
 
     public function savePersonRole(?int $id,int $locationId,array $data): int
