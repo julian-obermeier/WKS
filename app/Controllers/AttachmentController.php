@@ -32,6 +32,11 @@ final class AttachmentController
             if(!(new ValuablesRepository())->find((int)$attachment['record_id'],(int)active_location_id())){
                 throw new HttpException(404,'Anhang nicht gefunden.');
             }
+        } elseif ($attachment['module']==='house_bans') {
+            if(!Authorization::can('house_bans.read'))throw new HttpException(403,'Kein Zugriff auf diesen Anhang.');
+            if(!(new HouseBanRepository())->find((int)$attachment['record_id'],(int)active_location_id())){
+                throw new HttpException(404,'Anhang nicht gefunden.');
+            }
         } else {
             throw new HttpException(403,'Dieser Anhangstyp ist derzeit nicht freigegeben.');
         }

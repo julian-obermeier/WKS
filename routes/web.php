@@ -13,6 +13,7 @@ use WKS\Controllers\AuthController;
 use WKS\Controllers\DashboardController;
 use WKS\Controllers\DutybookController;
 use WKS\Controllers\HandoverController;
+use WKS\Controllers\HouseBanController;
 use WKS\Controllers\InstallController;
 use WKS\Controllers\LocationSelectionController;
 use WKS\Controllers\ProfileController;
@@ -136,3 +137,14 @@ $router->get('/valuables/{id}/pdf', [ValuablesController::class, 'pdf'], ['auth'
 $router->get('/valuables/{id}/print', [ValuablesController::class, 'printRecord'], ['auth','password','location','permission:valuables.export']);
 $router->get('/admin/settings/valuables', [SettingsController::class, 'valuables'], ['auth','password','location','permission:system.settings.manage']);
 $router->post('/admin/settings/valuables', [SettingsController::class, 'updateValuables'], ['auth','password','location','permission:system.settings.manage']);
+
+
+$router->get('/house-bans', [HouseBanController::class, 'index'], ['auth','password','location','permission:house_bans.read']);
+$router->get('/house-bans/create', [HouseBanController::class, 'create'], ['auth','password','location','permission:house_bans.create']);
+$router->post('/house-bans', [HouseBanController::class, 'store'], ['auth','password','location','permission:house_bans.create']);
+$router->get('/house-bans/{id}', [HouseBanController::class, 'show'], ['auth','password','location','permission:house_bans.read']);
+$router->get('/house-bans/{id}/edit', [HouseBanController::class, 'edit'], ['auth','password','location','permission:house_bans.edit']);
+$router->post('/house-bans/{id}', [HouseBanController::class, 'update'], ['auth','password','location','permission:house_bans.edit']);
+$router->post('/house-bans/{id}/delete', [HouseBanController::class, 'delete'], ['auth','password','location','permission:house_bans.delete']);
+$router->get('/house-bans-export.csv', [HouseBanController::class, 'exportCsv'], ['auth','password','location','permission:house_bans.export']);
+$router->get('/house-bans-export.pdf', [HouseBanController::class, 'exportPdf'], ['auth','password','location','permission:house_bans.export']);
