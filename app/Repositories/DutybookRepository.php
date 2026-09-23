@@ -309,14 +309,24 @@ final class DutybookRepository
              FROM dutybook_entries e LEFT JOIN dutybook_event_types t ON t.id=e.event_type_id
              WHERE e.location_id=:location_id AND e.deleted_at IS NULL
                AND e.status IN ("open","in_progress","handover")
-               AND (e.shift_session_id=:session_id OR EXISTS (
-                   SELECT 1 FROM shift_handover_entries he
-                   JOIN shift_handovers h ON h.id=he.handover_id
-                   WHERE he.entry_id=e.id AND h.status="completed"
-               ))
+               AND (
+                    e.shift_session_id=:origin_session
+                    OR EXISTS (
+                        SELECT 1
+                        FROM shift_handover_entries he
+                        JOIN shift_handovers h ON h.id=he.handover_id
+                        WHERE he.entry_id=e.id
+                          AND h.status="completed"
+                          AND h.to_shift_session_id=:received_session
+                    )
+               )
              ORDER BY e.occurred_at,e.id'
         );
-        $stmt->execute(['location_id'=>$locationId,'origin_session'=>$sessionId,'received_session'=>$sessionId]);
+        $stmt->execute([
+            'location_id'=>$locationId,
+            'origin_session'=>$sessionId,
+            'received_session'=>$sessionId,
+        ]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
