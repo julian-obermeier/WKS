@@ -65,9 +65,10 @@ foreach($sqlRoots as $root){
     foreach($it as $file){
         if(!$file->isFile()||$file->getExtension()!=='php')continue;
         $source=(string)file_get_contents($file->getPathname());
-        preg_match_all('/prepare\(\s*([\'"])([\s\S]*?)\1\s*\)/',$source,$prepared,PREG_SET_ORDER);
+        preg_match_all('/prepare\(\s*(\'(?:\\\\.|[^\'\\\\])*\'|"(?:\\\\.|[^"\\\\])*")\s*\)/s',$source,$prepared,PREG_SET_ORDER);
         foreach($prepared as $match){
-            preg_match_all('/:([A-Za-z_][A-Za-z0-9_]*)/',$match[2],$placeholders);
+            $literal=substr($match[1],1,-1);
+            preg_match_all('/:([A-Za-z_][A-Za-z0-9_]*)/',$literal,$placeholders);
             $counts=array_count_values($placeholders[1]??[]);
             $duplicates=array_keys(array_filter($counts,static fn(int $count):bool=>$count>1));
             if($duplicates!==[]){
