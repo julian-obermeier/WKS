@@ -316,7 +316,7 @@ final class DutybookRepository
                ))
              ORDER BY e.occurred_at,e.id'
         );
-        $stmt->execute(['location_id'=>$locationId,'session_id'=>$sessionId]);
+        $stmt->execute(['location_id'=>$locationId,'origin_session'=>$sessionId,'received_session'=>$sessionId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
