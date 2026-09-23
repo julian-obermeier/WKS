@@ -40,10 +40,12 @@ final class AnnouncementRepository
         $limit=max(1,min(200,$limit));
         $stmt=Database::connection()->prepare(
             "SELECT DISTINCT a.*,r.read_at,r.confirmed_at,r.revision AS read_revision,
-                    CASE WHEN r.revision IS NOT NULL AND r.revision<a.revision THEN 1 ELSE 0 END AS is_updated
+                    CASE WHEN COALESCE((SELECT MAX(prev.revision) FROM announcement_reads prev WHERE prev.announcement_id=a.id AND prev.user_id=:previous_user),0)>0
+                              AND COALESCE((SELECT MAX(prev2.revision) FROM announcement_reads prev2 WHERE prev2.announcement_id=a.id AND prev2.user_id=:previous_user2),0)<a.revision
+                         THEN 1 ELSE 0 END AS is_updated
              FROM announcements a
              JOIN announcement_targets t ON t.announcement_id=a.id
-             LEFT JOIN announcement_reads r ON r.announcement_id=a.id AND r.user_id=:user_id AND r.revision=a.revision
+             LEFT JOIN announcement_reads r ON r.announcement_id=a.id AND r.user_id=:current_user AND r.revision=a.revision
              WHERE a.deleted_at IS NULL AND a.status='published'
                AND (a.valid_from IS NULL OR a.valid_from<=NOW())
                AND (a.valid_until IS NULL OR a.valid_until>=NOW())
@@ -54,7 +56,7 @@ final class AnnouncementRepository
                )
              ORDER BY a.priority='important' DESC,a.published_at DESC,a.id DESC LIMIT {$limit}"
         );
-        $stmt->execute(['user_id'=>$userId,'location'=>(string)$locationId,'role'=>$roleCode]);
+        $stmt->execute(['current_user'=>$userId,'previous_user'=>$userId,'previous_user2'=>$userId,'location'=>(string)$locationId,'role'=>$roleCode]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

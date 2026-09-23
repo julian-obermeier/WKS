@@ -266,7 +266,7 @@ final class SpecialReportRepository
         if(!empty($filters['staff_id'])){$where[]='EXISTS (SELECT 1 FROM special_report_staff s WHERE s.report_id=r.id AND s.user_id=:staff_id)';$params['staff_id']=(int)$filters['staff_id'];}
         if(!empty($filters['person'])){$where[]='EXISTS (SELECT 1 FROM special_report_people p WHERE p.report_id=r.id AND CONCAT_WS(" ",p.first_name,p.last_name) LIKE :person)';$params['person']='%'.$filters['person'].'%';}
         if(!empty($filters['attachments']))$where[]='EXISTS (SELECT 1 FROM attachments a WHERE a.module="special_report" AND a.record_id=r.id AND a.deleted_at IS NULL)';
-        if(!empty($filters['q'])){$where[]='(r.facts LIKE :q OR r.measures_text LIKE :q OR r.result_text LIKE :q)';$params['q']='%'.$filters['q'].'%';}
+        if(!empty($filters['q'])){$where[]='(r.facts LIKE :q_facts OR r.measures_text LIKE :q_measures OR r.result_text LIKE :q_result)';$like='%'.$filters['q'].'%';$params['q_facts']=$like;$params['q_measures']=$like;$params['q_result']=$like;}
         $clause=implode(' AND ',$where);
         $c=Database::connection()->prepare("SELECT COUNT(*) FROM special_reports r WHERE {$clause}");$c->execute($params);$total=(int)$c->fetchColumn();
         $page=max(1,$page);$offset=($page-1)*$perPage;
