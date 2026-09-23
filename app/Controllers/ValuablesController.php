@@ -129,7 +129,7 @@ final class ValuablesController
     {
         $record=$this->record((int)$id);
         $title='Wertsachen · Verwahrnummer '.str_pad((string)$record['custody_number'],4,'0',STR_PAD_LEFT);
-        $content=(new DocumentGeneratorService())->pdf($title,$this->exportSections($record));
+        $content=(new DocumentGeneratorService())->pdfForTemplate('valuables',$title,$this->exportSections($record));
         (new AuditService())->log('valuables_export_pdf','valuables',$id,null,['custody_number'=>$record['custody_number']],[],$request);
         return new Response($content,200,[
             'Content-Type'=>'application/pdf',

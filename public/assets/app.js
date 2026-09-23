@@ -160,6 +160,10 @@
     document.querySelectorAll('canvas[data-chart]').forEach(drawChart);
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+        window.addEventListener('load', () => {
+            const manifest = document.querySelector('link[rel="manifest"]');
+            const swUrl = manifest ? new URL('service-worker.js', manifest.href).href : '/service-worker.js';
+            navigator.serviceWorker.register(swUrl).catch(() => {});
+        });
     }
 })();

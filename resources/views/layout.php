@@ -110,6 +110,11 @@ if ($user && active_location_id()) {
                     <?php if (can('system.trash.manage')): ?>
                         <a href="<?= e(url('admin/trash')) ?>" class="nav-link">⌫ <span>Papierkorb</span></a>
                     <?php endif; ?>
+                    <?php if (can('system.status.view')): ?><a href="<?= e(url('admin/system/status')) ?>" class="nav-link">◌ <span>Systemstatus</span></a><?php endif; ?>
+                    <?php if (can('system.errors.view')): ?><a href="<?= e(url('admin/errors')) ?>" class="nav-link">⚠ <span>Fehlerprotokoll</span></a><?php endif; ?>
+                    <?php if (can('system.cron.manage')): ?><a href="<?= e(url('admin/cron')) ?>" class="nav-link">↻ <span>Cronjobs</span></a><?php endif; ?>
+                    <?php if (can('system.mail.manage')): ?><a href="<?= e(url('admin/mail')) ?>" class="nav-link">✉ <span>E-Mail</span></a><?php endif; ?>
+                    <?php if (can('system.templates.manage')): ?><a href="<?= e(url('admin/templates')) ?>" class="nav-link">▱ <span>Vorlagen</span></a><?php endif; ?>
                     <?php if (can('system.settings.manage')): ?>
                         <a href="<?= e(url('admin/settings/security')) ?>" class="nav-link">⚙ <span>Sicherheit</span></a>
                         <a href="<?= e(url('admin/settings/valuables')) ?>" class="nav-link">▣ <span>Wertsachen-Einstellungen</span></a>

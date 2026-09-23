@@ -9,7 +9,7 @@
 <input type="date" name="date" value="<?= e($date) ?>"><button class="button secondary" type="submit">Tag öffnen</button>
 </form>
 <a class="button ghost" href="<?= e(url('dutybook/search')) ?>">Suche</a>
-<?php if(can('dutybook.export')):?><a class="button ghost" href="<?= e(url('dutybook-export.csv?date='.$date)) ?>">CSV</a><a class="button ghost" target="_blank" href="<?= e(url('dutybook-print?date='.$date)) ?>">Druckansicht</a><?php endif;?>
+<?php if(can('dutybook.export')):?><a class="button ghost" href="<?= e(url('dutybook-export.pdf?date='.$date)) ?>">PDF</a><a class="button ghost" href="<?= e(url('dutybook-export.csv?date='.$date)) ?>">CSV</a><a class="button ghost" target="_blank" href="<?= e(url('dutybook-print?date='.$date)) ?>">Druckansicht</a><?php endif;?>
 </div>
 
 <?php if($current): ?>

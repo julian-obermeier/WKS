@@ -29,9 +29,9 @@ final class TemplateController
     public function preview(Request $request,string $id): Response
     {
         $template=(new AdminRepository())->template((int)$id);if(!$template)throw new HttpException(404,'Vorlage nicht gefunden.');
-        $pdf=(new DocumentGeneratorService())->pdf('Vorschau · '.$template['template_name'],[
+        $pdf=(new DocumentGeneratorService())->pdfForTemplate($template['template_code'],'Vorschau · '.$template['template_name'],[
             'Beispielabschnitt'=>'Dies ist eine Vorschau der Kopf-/Fußzeilen- und Wasserzeicheneinstellungen.'
-        ],$template['watermark_text']);
+        ]);
         return new Response($pdf,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'inline; filename="Vorschau.pdf"']);
     }
 }

@@ -4,12 +4,35 @@ declare(strict_types=1);
 namespace WKS\Services;
 
 use ZipArchive;
+use WKS\Repositories\AdminRepository;
 
 final class DocumentGeneratorService
 {
-    public function pdf(string $title,array $sections,?string $watermark='VERTRAULICH'): string
+    public function pdfForTemplate(string $templateCode,string $title,array $sections): string
+    {
+        $template=(new AdminRepository())->templateByCode($templateCode);
+        if(!$template)return $this->pdf($title,$sections);
+        return $this->pdf($title,$sections,$template['watermark_text'],[
+            'header'=>$template['header_text'],
+            'footer'=>$template['footer_text'],
+            'page_numbers'=>(bool)$template['show_page_numbers'],
+        ]);
+    }
+
+    public function docxForTemplate(string $templateCode,string $title,array $sections): string
+    {
+        $template=(new AdminRepository())->templateByCode($templateCode);
+        if($template){
+            if($template['header_text'])$sections=['Kopfzeile'=>$template['header_text']]+$sections;
+            if($template['footer_text'])$sections['Fußzeile']=$template['footer_text'];
+        }
+        return $this->docx($title,$sections);
+    }
+
+    public function pdf(string $title,array $sections,?string $watermark='VERTRAULICH',array $options=[]): string
     {
         $lines=[];
+        if(!empty($options['header'])){$lines[]=(string)$options['header'];$lines[]='';}
         $lines[]=$title;
         $lines[]=str_repeat('=',min(90,max(10,mb_strlen($title))));
         $lines[]='';
@@ -65,6 +88,20 @@ final class DocumentGeneratorService
                 $commands[]='T*';
             }
             $commands[]="ET";
+            if(!empty($options['footer'])){
+                $commands[]="BT";
+                $commands[]="/F1 8 Tf";
+                $commands[]="48 24 Td";
+                $commands[]="(".$this->pdfText((string)$options['footer']).") Tj";
+                $commands[]="ET";
+            }
+            if(($options['page_numbers']??true)===true){
+                $commands[]="BT";
+                $commands[]="/F1 8 Tf";
+                $commands[]="270 24 Td";
+                $commands[]="(".$this->pdfText('Seite '.($i+1).' / '.count($pages)).") Tj";
+                $commands[]="ET";
+            }
             $stream=implode("\n",$commands);
             $contentId=$contentIds[$i];
             $pageId=$pageIds[$i];

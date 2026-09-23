@@ -84,6 +84,7 @@ $router->get('/dutybook/{id}', [DutybookController::class, 'show'], ['auth','pas
 $router->get('/dutybook/{id}/edit', [DutybookController::class, 'edit'], ['auth','password','location','permission:dutybook.edit']);
 $router->post('/dutybook/{id}', [DutybookController::class, 'update'], ['auth','password','location','permission:dutybook.edit']);
 $router->post('/dutybook/{id}/addendum', [DutybookController::class, 'addendum'], ['auth','password','location','permission:dutybook.addendum']);
+$router->get('/dutybook-export.pdf', [DutybookController::class, 'exportPdf'], ['auth','password','location','permission:dutybook.export']);
 $router->get('/dutybook-export.csv', [DutybookController::class, 'exportCsv'], ['auth','password','location','permission:dutybook.export']);
 $router->get('/dutybook-print', [DutybookController::class, 'printDay'], ['auth','password','location','permission:dutybook.export']);
 

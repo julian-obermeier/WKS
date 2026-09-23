@@ -12,6 +12,7 @@ use WKS\Core\View;
 use WKS\Repositories\DutybookRepository;
 use WKS\Repositories\MasterDataRepository;
 use WKS\Services\DutybookService;
+use WKS\Services\DocumentGeneratorService;
 use WKS\Services\ShiftService;
 
 final class DutybookController
@@ -148,4 +149,20 @@ final class DutybookController
             'externalOrganizations'=>$master->externalOrganizations($locationId),'users'=>$master->usersForLocation($locationId)
         ]);
     }
+
+    public function exportPdf(Request $request): Response
+    {
+        $date=(string)$request->query('date',date('Y-m-d'));
+        $repo=new DutybookRepository();$day=$repo->day((int)active_location_id(),$date);$entries=$repo->entriesForDay((int)active_location_id(),$date);
+        $rows=[];
+        foreach($entries as $e){
+            $rows[]=date('H:i',strtotime((string)$e['occurred_at'])).' · '.($e['shift_name']??'–').' · '.($e['event_type_name']??'Automatisch').' · '.$e['facts']
+                .($e['measures_text']?"\nMaßnahmen: ".$e['measures_text']:'').($e['result_text']?"\nErgebnis: ".$e['result_text']:'');
+        }
+        $title=$date.'_Dienstbuch_'.($day['location_name']??'Standort');
+        $pdf=(new DocumentGeneratorService())->pdfForTemplate('dutybook',$title,['Einträge'=>$rows]);
+        (new \WKS\Services\AuditService())->log('dutybook_export_pdf','dutybook',$date,null,['count'=>count($entries)],['date'=>$date],$request);
+        return new Response($pdf,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="'.$title.'.pdf"']);
+    }
+
 }

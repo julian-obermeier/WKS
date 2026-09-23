@@ -87,14 +87,14 @@ final class SpecialReportController
 
     public function pdf(Request $request,string $id): Response
     {
-        $r=$this->report((int)$id);$service=new SpecialReportService();$content=(new DocumentGeneratorService())->pdf('Sonderbericht '.$service->displayNumber($r),$service->exportSections($r));
+        $r=$this->report((int)$id);$service=new SpecialReportService();$content=(new DocumentGeneratorService())->pdfForTemplate('special_report','Sonderbericht '.$service->displayNumber($r),$service->exportSections($r));
         (new \WKS\Services\AuditService())->log('special_report_export_pdf','special_reports',$id,null,['version'=>$r['current_version']],[],$request);
         return new Response($content,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="'.$service->filename($r,'pdf').'"']);
     }
 
     public function docx(Request $request,string $id): Response
     {
-        $r=$this->report((int)$id);$service=new SpecialReportService();$path=(new DocumentGeneratorService())->docx('Sonderbericht '.$service->displayNumber($r),$service->exportSections($r));$content=(string)file_get_contents($path);@unlink($path);
+        $r=$this->report((int)$id);$service=new SpecialReportService();$path=(new DocumentGeneratorService())->docxForTemplate('special_report','Sonderbericht '.$service->displayNumber($r),$service->exportSections($r));$content=(string)file_get_contents($path);@unlink($path);
         (new \WKS\Services\AuditService())->log('special_report_export_docx','special_reports',$id,null,['version'=>$r['current_version']],[],$request);
         return new Response($content,200,['Content-Type'=>'application/vnd.openxmlformats-officedocument.wordprocessingml.document','Content-Disposition'=>'attachment; filename="'.$service->filename($r,'docx').'"']);
     }

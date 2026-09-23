@@ -70,7 +70,7 @@ final class HouseBanController
         $result=(new HouseBanRepository())->search((int)active_location_id(),$filters,1,10000);
         $rows=array_map(static fn(array $r):string=>$r['ban_date'].' · '.$r['person_name'].' · '.$r['reason'],$result['items']);
         $location=(new LocationRepository())->find((int)active_location_id());
-        $content=(new DocumentGeneratorService())->pdf('Hausverbotsliste · '.($location['name']??'Standort'),['Hausverbote'=>$rows]);
+        $content=(new DocumentGeneratorService())->pdfForTemplate('house_bans','Hausverbotsliste · '.($location['name']??'Standort'),['Hausverbote'=>$rows]);
         (new AuditService())->log('house_bans_export_pdf','house_bans',null,null,['filters'=>$filters,'count'=>$result['total']],[],$request);
         return new Response($content,200,['Content-Type'=>'application/pdf','Content-Disposition'=>'attachment; filename="Hausverbote.pdf"']);
     }

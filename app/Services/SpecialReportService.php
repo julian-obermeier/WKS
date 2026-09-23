@@ -309,8 +309,8 @@ final class SpecialReportService
         if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new \RuntimeException('Versionsverzeichnis kann nicht angelegt werden.');
         $base=pathinfo($this->filename($report,'pdf'),PATHINFO_FILENAME).'_v'.$version;
         $pdfRel='special-reports/'.$report['report_year'].'/'.$base.'.pdf';$pdfAbs=BASE_PATH.'/storage/generated/'.$pdfRel;
-        file_put_contents($pdfAbs,$generator->pdf($title,$sections));
-        $tmp=$generator->docx($title,$sections);$docxRel='special-reports/'.$report['report_year'].'/'.$base.'.docx';$docxAbs=BASE_PATH.'/storage/generated/'.$docxRel;
+        file_put_contents($pdfAbs,$generator->pdfForTemplate('special_report',$title,$sections));
+        $tmp=$generator->docxForTemplate('special_report',$title,$sections);$docxRel='special-reports/'.$report['report_year'].'/'.$base.'.docx';$docxAbs=BASE_PATH.'/storage/generated/'.$docxRel;
         if(!rename($tmp,$docxAbs)){@unlink($tmp);throw new \RuntimeException('DOCX-Version konnte nicht archiviert werden.');}
         return [$pdfRel,$docxRel];
     }
