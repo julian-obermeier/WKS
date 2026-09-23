@@ -133,15 +133,15 @@ function wks_extract(string $zipPath,string $stage): void
 
             $target=$stage.'/'.$relative;
             if(str_ends_with($name,'/')){
-                if(!is_dir($target)&&!mkdir($target,0770,true)&&!is_dir($target))throw new RuntimeException('Verzeichnis kann nicht angelegt werden: '.$relative);
+                if(!is_dir($target)&&!mkdir($target,0755,true)&&!is_dir($target))throw new RuntimeException('Verzeichnis kann nicht angelegt werden: '.$relative);
                 continue;
             }
 
             $dir=dirname($target);
-            if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new RuntimeException('Verzeichnis kann nicht angelegt werden: '.dirname($relative));
+            if(!is_dir($dir)&&!mkdir($dir,0755,true)&&!is_dir($dir))throw new RuntimeException('Verzeichnis kann nicht angelegt werden: '.dirname($relative));
             $in=$zip->getStream($name);$out=fopen($target,'wb');
             if(!$in||!$out)throw new RuntimeException('Archivdatei kann nicht entpackt werden: '.$relative);
-            stream_copy_to_stream($in,$out);fclose($in);fclose($out);@chmod($target,0640);
+            stream_copy_to_stream($in,$out);fclose($in);fclose($out);@chmod($target,0644);
         }
     }finally{
         $zip->close();
@@ -155,7 +155,7 @@ function wks_extract(string $zipPath,string $stage): void
 
 function wks_copy_tree(string $source,string $destination): void
 {
-    if(!is_dir($destination)&&!mkdir($destination,0770,true)&&!is_dir($destination))throw new RuntimeException('Zielverzeichnis kann nicht angelegt werden.');
+    if(!is_dir($destination)&&!mkdir($destination,0755,true)&&!is_dir($destination))throw new RuntimeException('Zielverzeichnis kann nicht angelegt werden.');
     foreach(scandir($source)?:[] as $name){
         if($name==='.'||$name==='..')continue;
         $src=$source.'/'.$name;$dst=$destination.'/'.$name;
@@ -163,9 +163,9 @@ function wks_copy_tree(string $source,string $destination): void
         if(is_link($src))throw new RuntimeException('Symbolische Links werden nicht installiert.');
         if(is_dir($src))wks_copy_tree($src,$dst);
         else{
-            $dir=dirname($dst);if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new RuntimeException('Zielverzeichnis kann nicht angelegt werden.');
+            $dir=dirname($dst);if(!is_dir($dir)&&!mkdir($dir,0755,true)&&!is_dir($dir))throw new RuntimeException('Zielverzeichnis kann nicht angelegt werden.');
             if(!copy($src,$dst))throw new RuntimeException('Datei konnte nicht installiert werden: '.str_replace(dirname(__DIR__).'/', '',$dst));
-            @chmod($dst,0640);
+            @chmod($dst,0644);
         }
     }
 }
@@ -194,16 +194,22 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST'){
         $token=bin2hex(random_bytes(8));
         $zipPath=$root.'/.wks-bootstrap-'.$token.'.zip';
         $stage=$root.'/.wks-bootstrap-'.$token;
-        if(!mkdir($stage,0770,true)&&!is_dir($stage))throw new RuntimeException('Temporäres Installationsverzeichnis kann nicht angelegt werden.');
+        if(!mkdir($stage,0755,true)&&!is_dir($stage))throw new RuntimeException('Temporäres Installationsverzeichnis kann nicht angelegt werden.');
 
         try{
             wks_download(WKS_ARCHIVE_URL,$zipPath);
             wks_extract($zipPath,$stage);
             wks_copy_tree($stage,$root);
+            @chmod($root,0755);
+            foreach(['app','bootstrap','config','database','public','resources','routes','bin'] as $relative){
+                $path=$root.'/'.$relative;if(is_dir($path))@chmod($path,0755);
+            }
             foreach(['storage/uploads','storage/logs','storage/exports','storage/generated','storage/sessions'] as $relative){
                 $path=$root.'/'.$relative;
                 if(!is_dir($path)&&!mkdir($path,0770,true)&&!is_dir($path))throw new RuntimeException('Storage-Verzeichnis konnte nicht angelegt werden: '.$relative);
             }
+            if(is_file($root.'/public/.htaccess'))@chmod($root.'/public/.htaccess',0644);
+            if(is_file($root.'/public/index.php'))@chmod($root.'/public/index.php',0644);
             if(!wks_existing_app($root))throw new RuntimeException('WKS-Dateien konnten nach der Installation nicht verifiziert werden.');
         }finally{
             @unlink($zipPath);

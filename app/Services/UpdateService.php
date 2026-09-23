@@ -102,7 +102,7 @@ final class UpdateService
 
     private function mirrorDirectory(string $source,string $destination,bool $deleteExtra): void
     {
-        if(!is_dir($source))return;if(!is_dir($destination)&&!mkdir($destination,0770,true)&&!is_dir($destination))throw new RuntimeException('Verzeichnis konnte nicht angelegt werden: '.$destination);
+        if(!is_dir($source))return;if(!is_dir($destination)&&!mkdir($destination,0755,true)&&!is_dir($destination))throw new RuntimeException('Verzeichnis konnte nicht angelegt werden: '.$destination);@chmod($destination,0755);
         $sourceNames=[];
         foreach(scandir($source)?:[] as $name){if($name==='.'||$name==='..')continue;$sourceNames[]=$name;$src=$source.'/'.$name;$dst=$destination.'/'.$name;if(is_dir($src))$this->mirrorDirectory($src,$dst,$deleteExtra);else $this->copyFile($src,$dst);}
         if($deleteExtra)foreach(scandir($destination)?:[] as $name){if($name==='.'||$name==='..'||in_array($name,$sourceNames,true))continue;$path=$destination.'/'.$name;if(is_dir($path))$this->removeDirectory($path);else @unlink($path);}
@@ -110,8 +110,8 @@ final class UpdateService
 
     private function copyFile(string $source,string $destination): void
     {
-        $dir=dirname($destination);if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new RuntimeException('Zielverzeichnis konnte nicht angelegt werden.');
-        if(!copy($source,$destination))throw new RuntimeException('Datei konnte nicht aktualisiert werden: '.str_replace(BASE_PATH.'/','',$destination));@chmod($destination,0640);
+        $dir=dirname($destination);if(!is_dir($dir)&&!mkdir($dir,0755,true)&&!is_dir($dir))throw new RuntimeException('Zielverzeichnis konnte nicht angelegt werden.');@chmod($dir,0755);
+        if(!copy($source,$destination))throw new RuntimeException('Datei konnte nicht aktualisiert werden: '.str_replace(BASE_PATH.'/','',$destination));@chmod($destination,0644);
     }
 
     private function removeDirectory(string $dir): void
