@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace WKS\Controllers;
 
 use DateTimeImmutable;
+use WKS\Core\Authorization;
+use WKS\Core\HttpException;
 use WKS\Core\Request;
 use WKS\Core\Response;
 use WKS\Core\View;
@@ -20,6 +22,26 @@ final class StatisticsController
     {
         $data=$this->data($request);
         return View::render('statistics/index',$data);
+    }
+
+    public function drilldown(Request $request): Response
+    {
+        $day=trim((string)$request->query('day',''));$date=DateTimeImmutable::createFromFormat('!Y-m-d',$day);
+        if(!$date||$date->format('Y-m-d')!==$day)throw new HttpException(422,'Ungültiges Statistikdatum.');
+        $eventTypeId=max(0,(int)$request->query('event_type_id',0));$reportTypeId=max(0,(int)$request->query('report_type_id',0));
+        $locationId=(int)active_location_id();$master=new MasterDataRepository();$eventTypes=$master->eventTypes($locationId);
+        $specialReportTypes=(new SpecialReportRepository())->types($locationId);
+        if($eventTypeId&&!in_array($eventTypeId,array_map('intval',array_column($eventTypes,'id')),true))$eventTypeId=0;
+        if($reportTypeId&&!in_array($reportTypeId,array_map('intval',array_column($specialReportTypes,'id')),true))$reportTypeId=0;
+        $modules=[];
+        if(Authorization::can('dutybook.read'))$modules[]='dutybook';
+        if(Authorization::can('special_reports.read'))$modules[]='special_reports';
+        if(Authorization::can('valuables.read'))$modules[]='valuables';
+        if(Authorization::can('house_bans.read'))$modules[]='house_bans';
+        $items=(new StatisticsRepository())->drilldown(
+            $locationId,$day,$eventTypeId?:null,$reportTypeId?:null,$modules,Authorization::can('valuables.archive')
+        );
+        return View::render('statistics/drilldown',compact('day','items','eventTypeId','reportTypeId'));
     }
 
     public function exportCsv(Request $request): Response
@@ -92,7 +114,7 @@ final class StatisticsController
         $summary=$repo->summary($locationId,$from,$to,$eventTypeId?:null,$reportTypeId?:null);
         $events=$repo->dutybookByEvent($locationId,$from,$to,$eventTypeId?:null);
         $reportTypes=$repo->specialReportsByType($locationId,$from,$to,$reportTypeId?:null);
-        $timeline=$repo->timeline($locationId,$from,$to);
+        $timeline=$repo->timeline($locationId,$from,$to,$eventTypeId?:null,$reportTypeId?:null);
         return compact('from','to','summary','events','reportTypes','timeline','eventTypes','specialReportTypes','eventTypeId','reportTypeId');
     }
 
