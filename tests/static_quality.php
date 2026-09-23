@@ -58,6 +58,25 @@ foreach($viewFiles as $file){
     if(preg_match('/Database::|->prepare\s*\(|->query\s*\(/',$source))$errors[]='Direct database access in view: '.str_replace(BASE_PATH.'/','',$file);
 }
 
+$sqlRoots=['app/Repositories','app/Services'];
+foreach($sqlRoots as $root){
+    $path=BASE_PATH.'/'.$root;
+    $it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path,FilesystemIterator::SKIP_DOTS));
+    foreach($it as $file){
+        if(!$file->isFile()||$file->getExtension()!=='php')continue;
+        $source=(string)file_get_contents($file->getPathname());
+        preg_match_all('/prepare\(\s*([\'"])([\s\S]*?)\1\s*\)/',$source,$prepared,PREG_SET_ORDER);
+        foreach($prepared as $match){
+            preg_match_all('/:([A-Za-z_][A-Za-z0-9_]*)/',$match[2],$placeholders);
+            $counts=array_count_values($placeholders[1]??[]);
+            $duplicates=array_keys(array_filter($counts,static fn(int $count):bool=>$count>1));
+            if($duplicates!==[]){
+                $errors[]='Repeated native PDO placeholder(s) '.implode(', ',$duplicates).' in '.str_replace(BASE_PATH.'/','',$file->getPathname());
+            }
+        }
+    }
+}
+
 $scanRoots=['app','bootstrap','config','database','public','resources','routes','bin'];
 foreach($scanRoots as $root){
     $path=BASE_PATH.'/'.$root;if(!is_dir($path))continue;

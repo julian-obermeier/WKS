@@ -16,7 +16,9 @@ jobs:
       - name: Lint PHP files
         run: find app bootstrap config database public routes resources bin tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Static quality checks
-        run: php tests/static_quality.php
+        run: |
+          php tests/static_quality.php
+          php tests/security_architecture.php
       - name: Check JavaScript syntax
         run: node --check public/assets/app.js
       - name: Validate JSON artifacts
