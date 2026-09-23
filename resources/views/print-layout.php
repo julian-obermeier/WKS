@@ -1,0 +1,1 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= isset($title)?e($title):'WKS' ?></title><link rel="stylesheet" href="<?= e(asset('app.css')) ?>"></head><body><main style="max-width:1100px;margin:30px auto;padding:20px"><?= $content ?></main></body></html>

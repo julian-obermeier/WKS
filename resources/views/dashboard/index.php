@@ -13,6 +13,17 @@
     <div class="metric-card"><span class="metric-icon">✓</span><div><small>Kontostatus</small><strong>Aktiv</strong></div></div>
 </div>
 
+<?php if (can('dutybook.read')): ?>
+<div class="panel">
+    <div class="panel-header"><div><h2>Dienstbuch</h2><p>Schicht, Anwesenheit, offene Vorgänge und Übergaben</p></div></div>
+    <div class="quick-grid">
+        <a class="quick-card" href="<?= e(url('dutybook')) ?>"><span>▤</span><strong>Tagesdienstbuch</strong><small>Aktuelle Schicht und Tagesereignisse</small></a>
+        <?php if (can('dutybook.create')): ?><a class="quick-card" href="<?= e(url('dutybook/create')) ?>"><span>＋</span><strong>Eintrag erfassen</strong><small>Neuen Vorgang dokumentieren</small></a><?php endif; ?>
+        <a class="quick-card" href="<?= e(url('dutybook/search')) ?>"><span>⌕</span><strong>Suche</strong><small>Dienstbucheinträge gezielt filtern</small></a>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (can('system.users.manage') || can('system.locations.manage') || can('system.audit.view')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Administration</h2><p>Grundkonfiguration des Systems</p></div></div>

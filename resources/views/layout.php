@@ -61,6 +61,9 @@ if ($user && active_location_id()) {
             <aside class="sidebar">
                 <nav>
                     <a href="<?= e(url()) ?>" class="nav-link">⌂ <span>Dashboard</span></a>
+                    <?php if (can('dutybook.read')): ?>
+                        <a href="<?= e(url('dutybook')) ?>" class="nav-link">▤ <span>Dienstbuch</span></a>
+                    <?php endif; ?>
                     <?php if (can('system.users.manage') || can('system.roles.manage') || can('system.locations.manage') || can('system.audit.view') || can('system.settings.manage')): ?>
                         <div class="nav-section">Administration</div>
                     <?php endif; ?>
@@ -72,6 +75,9 @@ if ($user && active_location_id()) {
                     <?php endif; ?>
                     <?php if (can('system.locations.manage')): ?>
                         <a href="<?= e(url('admin/locations')) ?>" class="nav-link">⌖ <span>Standorte</span></a>
+                    <?php endif; ?>
+                    <?php if (can('system.masterdata.manage')): ?>
+                        <a href="<?= e(url('admin/dutybook')) ?>" class="nav-link">⌘ <span>Dienstbuch-Stammdaten</span></a>
                     <?php endif; ?>
                     <?php if (can('system.audit.view')): ?>
                         <a href="<?= e(url('admin/audit')) ?>" class="nav-link">≡ <span>Audit-Log</span></a>
