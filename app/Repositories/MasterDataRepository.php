@@ -285,7 +285,7 @@ final class MasterDataRepository
 
     public function syncEventMeasures(int $eventTypeId,int $locationId,array $measureIds): void
     {
-        if(!$this->eventType($eventTypeId,$locationId)) throw new \\InvalidArgumentException('Ungültige Ereignisart.');
+        if(!$this->eventType($eventTypeId,$locationId)) throw new \InvalidArgumentException('Ungültige Ereignisart.');
         $pdo=Database::connection();$pdo->beginTransaction();
         try{
             $pdo->prepare('DELETE FROM event_type_measures WHERE event_type_id=:id')->execute(['id'=>$eventTypeId]);
@@ -336,7 +336,7 @@ final class MasterDataRepository
 
     public function saveDynamicFieldForModule(?int $id,string $module,array $data,int $userId): int
     {
-        if(!in_array($module,['dutybook_event','special_report_type'],true))throw new \\InvalidArgumentException('Ungültiges dynamisches Formularmodul.');
+        if(!in_array($module,['dutybook_event','special_report_type'],true))throw new \InvalidArgumentException('Ungültiges dynamisches Formularmodul.');
         if($id===null){
             $stmt=Database::connection()->prepare(
                 'INSERT INTO dynamic_fields (module,definition_id,field_key,label,field_type,required,sort_order,options_json,visibility_json,active,created_at,updated_at,created_by,updated_by)
