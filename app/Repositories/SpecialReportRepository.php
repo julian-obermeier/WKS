@@ -30,9 +30,9 @@ final class SpecialReportRepository
         if($id===null){
             $stmt=Database::connection()->prepare(
                 'INSERT INTO special_report_types (location_id,name,code,sort_order,active,force_section_enabled,created_at,updated_at,created_by,updated_by)
-                 VALUES (:location_id,:name,:code,:sort_order,:active,:force_section_enabled,NOW(),NOW(),:user_id,:user_id)'
+                 VALUES (:location_id,:name,:code,:sort_order,:active,:force_section_enabled,NOW(),NOW(),:created_by,:updated_by)'
             );
-            $stmt->execute($data+['location_id'=>$locationId,'user_id'=>$userId]);
+            $stmt->execute($data+['location_id'=>$locationId,'created_by'=>$userId,'updated_by'=>$userId]);
             return (int)Database::connection()->lastInsertId();
         }
         $stmt=Database::connection()->prepare(
@@ -40,7 +40,7 @@ final class SpecialReportRepository
              force_section_enabled=:force_section_enabled,updated_at=NOW(),updated_by=:user_id
              WHERE id=:id AND location_id=:location_id'
         );
-        $stmt->execute($data+['id'=>$id,'location_id'=>$locationId,'user_id'=>$userId]);
+        $stmt->execute($data+['id'=>$id,'location_id'=>$locationId,'created_by'=>$userId,'updated_by'=>$userId]);
         return $id;
     }
 
@@ -236,13 +236,13 @@ final class SpecialReportRepository
     public function addRevisionRequest(int $reportId,string $text,int $userId): int
     {
         $s=Database::connection()->prepare('INSERT INTO special_report_revision_requests (report_id,request_text,status,created_by,created_at) VALUES (:report_id,:text,"open",:user_id,NOW())');
-        $s->execute(['report_id'=>$reportId,'text'=>$text,'user_id'=>$userId]);return (int)Database::connection()->lastInsertId();
+        $s->execute(['report_id'=>$reportId,'text'=>$text,'created_by'=>$userId,'updated_by'=>$userId]);return (int)Database::connection()->lastInsertId();
     }
 
     public function completeRevisionRequest(int $reportId,int $requestId,int $userId): void
     {
         $s=Database::connection()->prepare('UPDATE special_report_revision_requests SET status="done",completed_by=:user_id,completed_at=NOW() WHERE id=:id AND report_id=:report_id AND status="open"');
-        $s->execute(['user_id'=>$userId,'id'=>$requestId,'report_id'=>$reportId]);
+        $s->execute(['created_by'=>$userId,'updated_by'=>$userId,'id'=>$requestId,'report_id'=>$reportId]);
     }
 
     public function openRevisionCount(int $id): int
@@ -255,7 +255,7 @@ final class SpecialReportRepository
         $s=Database::connection()->prepare(
             'INSERT INTO special_report_versions (report_id,version_number,snapshot_json,pdf_path,docx_path,created_by,created_at)
              VALUES (:report_id,:version,:snapshot,:pdf,:docx,:user_id,NOW())'
-        );$s->execute(['report_id'=>$reportId,'version'=>$version,'snapshot'=>json_encode($snapshot,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),'pdf'=>$pdfPath,'docx'=>$docxPath,'user_id'=>$userId]);
+        );$s->execute(['report_id'=>$reportId,'version'=>$version,'snapshot'=>json_encode($snapshot,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),'pdf'=>$pdfPath,'docx'=>$docxPath,'created_by'=>$userId,'updated_by'=>$userId]);
         Database::connection()->prepare('UPDATE special_reports SET current_version=:version WHERE id=:id')->execute(['version'=>$version,'id'=>$reportId]);
     }
 
