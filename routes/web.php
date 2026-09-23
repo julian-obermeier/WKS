@@ -131,3 +131,8 @@ $router->post('/valuables/{id}/release', [ValuablesController::class, 'release']
 $router->post('/valuables/{id}/note', [ValuablesController::class, 'note'], ['auth','password','location','permission:valuables.add_note']);
 $router->get('/valuables/{id}/correction', [ValuablesController::class, 'correction'], ['auth','password','location','permission:valuables.store']);
 $router->get('/valuables-export.csv', [ValuablesController::class, 'exportCsv'], ['auth','password','location','permission:valuables.export']);
+
+$router->get('/valuables/{id}/pdf', [ValuablesController::class, 'pdf'], ['auth','password','location','permission:valuables.export']);
+$router->get('/valuables/{id}/print', [ValuablesController::class, 'printRecord'], ['auth','password','location','permission:valuables.export']);
+$router->get('/admin/settings/valuables', [SettingsController::class, 'valuables'], ['auth','password','location','permission:system.settings.manage']);
+$router->post('/admin/settings/valuables', [SettingsController::class, 'updateValuables'], ['auth','password','location','permission:system.settings.manage']);

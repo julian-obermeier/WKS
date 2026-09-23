@@ -10,6 +10,7 @@ use WKS\Core\Response;
 use WKS\Core\View;
 use WKS\Repositories\ValuablesRepository;
 use WKS\Services\AuditService;
+use WKS\Services\DocumentGeneratorService;
 use WKS\Services\ValuablesService;
 
 final class ValuablesController
@@ -123,4 +124,73 @@ final class ValuablesController
         $repo=new ValuablesRepository();$locationId=(int)active_location_id();
         return View::render('valuables/form',['storage'=>$repo->storageLocations($locationId),'cassettes'=>$repo->cassettes($locationId),'correctionParent'=>$correctionParent]);
     }
+
+    public function pdf(Request $request,string $id): Response
+    {
+        $record=$this->record((int)$id);
+        $title='Wertsachen · Verwahrnummer '.str_pad((string)$record['custody_number'],4,'0',STR_PAD_LEFT);
+        $content=(new DocumentGeneratorService())->pdf($title,$this->exportSections($record));
+        (new AuditService())->log('valuables_export_pdf','valuables',$id,null,['custody_number'=>$record['custody_number']],[],$request);
+        return new Response($content,200,[
+            'Content-Type'=>'application/pdf',
+            'Content-Disposition'=>'attachment; filename="Wertsache_'.str_pad((string)$record['custody_number'],4,'0',STR_PAD_LEFT).'.pdf"'
+        ]);
+    }
+
+    public function printRecord(Request $request,string $id): Response
+    {
+        $record=$this->record((int)$id);
+        $sections=$this->exportSections($record);
+        return View::render('valuables/print',compact('record','sections'),200,'print-layout');
+    }
+
+    private function record(int $id): array
+    {
+        $record=(new ValuablesRepository())->find($id,(int)active_location_id());
+        if(!$record)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+        return $record;
+    }
+
+    private function exportSections(array $record): array
+    {
+        $containers=[];
+        foreach($record['containers'] as $c){
+            $line='Pos. '.(int)$c['position_number'].' · '.$c['container_type'].' · '.$c['storage_label'];
+            if($c['cassette_number'])$line.=' · Kassette '.(int)$c['cassette_number'].' · Siegel L '.$c['seal_left'].' / R '.$c['seal_right'];
+            $containers[]=$line;
+        }
+        $sections=[
+            'Person'=>[
+                'Name: '.$record['first_name'].' '.$record['last_name'],
+                'Geburtsdatum: '.$record['birth_date'],
+                'Interne Kennung: '.($record['internal_identifier']??'–'),
+            ],
+            'Einlagerung'=>[
+                'Zeit: '.format_datetime($record['stored_at']),
+                'Mitarbeiter: '.($record['stored_by_name']??'–'),
+                'Übergeben durch: '.$record['handed_over_by_name'].' · '.$record['handed_over_by_type'],
+                'Organisation/Bereich: '.($record['handed_over_by_organization']??'–'),
+                'Bemerkung: '.($record['storage_note']??'–'),
+            ],
+            'Behältnisse'=>$containers,
+        ];
+        if($record['status']==='released'){
+            $sections['Auslagerung']=[
+                'Zeit: '.format_datetime($record['released_at']),
+                'Mitarbeiter: '.($record['released_by_name']??'–'),
+                'Empfänger: '.($record['receiver_name']??'–').' · '.($record['receiver_type']??'–'),
+                'Grund Fremdausgabe: '.($record['receiver_reason']??'–'),
+                'Organisation/Bereich: '.($record['receiver_organization']??'–'),
+                'Bemerkung: '.($record['release_note']??'–'),
+            ];
+            $checks=[];
+            foreach($record['containers'] as $c){
+                if(!$c['cassette_id'])continue;
+                $checks[]='Kassette '.(int)$c['cassette_number'].' · L: '.($c['seal_left_matches']?'stimmt':'abweichend').' / '.($c['seal_left_condition']??'–').' · R: '.($c['seal_right_matches']?'stimmt':'abweichend').' / '.($c['seal_right_condition']??'–');
+            }
+            $sections['Siegelprüfung']=$checks;
+        }
+        return $sections;
+    }
+
 }

@@ -1,0 +1,3 @@
+<?php $title='Wertsache '.str_pad((string)$record['custody_number'],4,'0',STR_PAD_LEFT); ?>
+<div class="document-header"><div><strong>WKS · Wertsachenverwahrung</strong><div><?= e($record['first_name'].' '.$record['last_name']) ?></div></div><div><strong>Verwahrnr. <?= e(str_pad((string)$record['custody_number'],4,'0',STR_PAD_LEFT)) ?></strong><div><?= $record['status']==='stored'?'eingelagert':'vollständig ausgelagert' ?></div></div></div>
+<?php foreach($sections as $heading=>$rows):?><section class="print-entry"><strong><?= e($heading) ?></strong><?php foreach((array)$rows as $row):?><div class="prose"><?= e($row) ?></div><?php endforeach;?></section><?php endforeach;?><script>window.addEventListener('load',()=>window.print());</script>

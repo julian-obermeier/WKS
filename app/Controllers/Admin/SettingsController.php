@@ -50,4 +50,33 @@ final class SettingsController
         flash('success', 'Sicherheitseinstellungen wurden gespeichert.');
         return Response::redirect(url('admin/settings/security'));
     }
+
+    public function valuables(Request $request): Response
+    {
+        $repo=new SettingsRepository();
+        $settings=[
+            'long_term_days'=>(int)$repo->get('valuables.long_term_days',14),
+            'retention_days'=>(int)$repo->get('valuables.retention_days',3650),
+        ];
+        return View::render('admin/settings/valuables',compact('settings'));
+    }
+
+    public function updateValuables(Request $request): Response
+    {
+        $longTerm=max(1,min(3650,(int)$request->post('long_term_days',14)));
+        $retention=max(1,min(36500,(int)$request->post('retention_days',3650)));
+        $repo=new SettingsRepository();
+        $old=[
+            'long_term_days'=>$repo->get('valuables.long_term_days',14),
+            'retention_days'=>$repo->get('valuables.retention_days',3650),
+        ];
+        $repo->set('valuables.long_term_days',$longTerm,'int',Auth::id());
+        $repo->set('valuables.retention_days',$retention,'int',Auth::id());
+        (new AuditService())->log('valuables_settings_updated','settings','valuables',$old,[
+            'long_term_days'=>$longTerm,'retention_days'=>$retention
+        ],[],$request);
+        flash('success','Wertsachen-Einstellungen wurden gespeichert.');
+        return Response::redirect(url('admin/settings/valuables'));
+    }
+
 }
