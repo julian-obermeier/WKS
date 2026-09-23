@@ -1,0 +1,16 @@
+.env
+/.idea/
+/.vscode/
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+/storage/exports/*
+!/storage/exports/.gitkeep
+/storage/generated/*
+!/storage/generated/.gitkeep
+/storage/sessions/*
+!/storage/sessions/.gitkeep
+*.log
+.DS_Store
+Thumbs.db
