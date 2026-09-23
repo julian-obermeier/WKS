@@ -134,6 +134,7 @@ final class ValuablesRepository
         if(!$record)return null;
         $record['containers']=$this->containers($id);
         $record['notes']=$this->notes($id);
+        $record['addenda']=$this->addenda($id);
         $record['history']=$this->history($id);
         $record['attachments']=$this->attachments($id);
         return $record;
@@ -162,6 +163,31 @@ final class ValuablesRepository
              LEFT JOIN users u ON u.id=n.created_by WHERE n.valuables_record_id=:record_id ORDER BY n.created_at,n.id'
         );
         $stmt->execute(['record_id'=>$recordId]);return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function addenda(int $recordId): array
+    {
+        $stmt=Database::connection()->prepare(
+            'SELECT a.*,CONCAT(u.first_name," ",u.last_name) AS user_name,child.custody_number AS correction_child_number
+             FROM valuables_addenda a
+             LEFT JOIN users u ON u.id=a.created_by
+             LEFT JOIN valuables_records child ON child.id=a.correction_child_id
+             WHERE a.valuables_record_id=:record_id
+             ORDER BY a.created_at,a.id'
+        );
+        $stmt->execute(['record_id'=>$recordId]);return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function addAddendum(int $recordId,string $reason,string $text,int $userId,?int $correctionChildId=null): int
+    {
+        $stmt=Database::connection()->prepare(
+            'INSERT INTO valuables_addenda (valuables_record_id,reason,addendum_text,correction_child_id,created_by,created_at)
+             VALUES (:record_id,:reason,:text,:correction_child_id,:user_id,NOW())'
+        );
+        $stmt->execute([
+            'record_id'=>$recordId,'reason'=>$reason,'text'=>$text,'correction_child_id'=>$correctionChildId,'user_id'=>$userId
+        ]);
+        return (int)Database::connection()->lastInsertId();
     }
 
     public function history(int $recordId): array
