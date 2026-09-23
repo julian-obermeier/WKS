@@ -74,7 +74,7 @@ final class SpecialReportService
                 'incident_ended_at'=>$core['incident_ended_at'],'place_id'=>$core['place_id'],'place_free_text'=>$core['place_free_text'],
                 'facts'=>$core['facts'],'measures_text'=>$core['measures_text'],'result_text'=>$core['result_text'],'status'=>$status,'updated_by'=>Auth::id()
             ]);
-            $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled']);
+            $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled'],(array)($type['force_requirements']??[]));
             $pdo->commit();
             if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments']);
             $this->storeWitnessAttachments($id,$witnessIds,$files['witness_attachments']??[]);
