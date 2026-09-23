@@ -14,6 +14,8 @@ use WKS\Controllers\DashboardController;
 use WKS\Controllers\DutybookController;
 use WKS\Controllers\HandoverController;
 use WKS\Controllers\HouseBanController;
+use WKS\Controllers\AnnouncementController;
+use WKS\Controllers\NotificationController;
 use WKS\Controllers\Admin\TrashController;
 use WKS\Controllers\InstallController;
 use WKS\Controllers\LocationSelectionController;
@@ -155,3 +157,17 @@ $router->get('/admin/trash', [TrashController::class, 'index'], ['auth','passwor
 $router->post('/admin/trash/{module}/{id}/move', [TrashController::class, 'move'], ['auth','password','location','permission:system.trash.manage']);
 $router->post('/admin/trash/{trashId}/restore', [TrashController::class, 'restore'], ['auth','password','location','permission:system.trash.manage']);
 $router->post('/admin/trash/{trashId}/delete', [TrashController::class, 'hardDelete'], ['auth','password','location','permission:system.trash.manage']);
+
+
+$router->get('/announcements', [AnnouncementController::class, 'index'], ['auth','password','location','permission:messages.read']);
+$router->get('/announcements/manage', [AnnouncementController::class, 'manage'], ['auth','password','location','permission:messages.manage']);
+$router->get('/announcements/create', [AnnouncementController::class, 'create'], ['auth','password','location','permission:messages.manage']);
+$router->post('/announcements', [AnnouncementController::class, 'store'], ['auth','password','location','permission:messages.manage']);
+$router->get('/announcements/{id}', [AnnouncementController::class, 'show'], ['auth','password','location','permission:messages.read']);
+$router->get('/announcements/{id}/edit', [AnnouncementController::class, 'edit'], ['auth','password','location','permission:messages.manage']);
+$router->post('/announcements/{id}', [AnnouncementController::class, 'update'], ['auth','password','location','permission:messages.manage']);
+$router->post('/announcements/{id}/confirm', [AnnouncementController::class, 'confirm'], ['auth','password','location','permission:messages.read']);
+
+$router->get('/notifications', [NotificationController::class, 'index'], ['auth','password','location','permission:notifications.read']);
+$router->post('/notifications/{id}/read', [NotificationController::class, 'read'], ['auth','password','location','permission:notifications.read']);
+$router->post('/notifications/read-all', [NotificationController::class, 'readAll'], ['auth','password','location','permission:notifications.read']);

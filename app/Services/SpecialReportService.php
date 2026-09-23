@@ -93,6 +93,7 @@ final class SpecialReportService
              edit_locked_at=NOW(),updated_at=NOW(),updated_by=:user_id WHERE id=:id AND location_id=:location_id'
         )->execute(['user_id'=>Auth::id(),'id'=>$id,'location_id'=>$locationId]);
         (new AuditService())->log('special_report_completed','special_reports',(string)$id,['status'=>$r['status']],['status'=>'completed'],[],null,Auth::id(),$locationId);
+        (new NotificationService())->notifyRole('special_report_completed',$locationId,'management','Sonderbericht zur Prüfung','Sonderbericht '.$this->displayNumber($r).' wurde abgeschlossen und wartet auf Leitungsprüfung.',url('special-reports/'.$id),'important');
     }
 
     public function requestRevision(int $locationId,int $id,array $texts,string $note=''): void
@@ -110,6 +111,7 @@ final class SpecialReportService
             $pdo->commit();
         }catch(\Throwable $e){$pdo->rollBack();throw $e;}
         (new AuditService())->log('special_report_revision_requested','special_reports',(string)$id,['status'=>'completed'],['status'=>'revision_required','requests'=>$texts],[],null,Auth::id(),$locationId);
+        (new NotificationService())->notifyUser((int)$r['created_by'],'special_report_revision_required',$locationId,'Nachbearbeitung erforderlich','Für Sonderbericht '.$this->displayNumber($r).' wurden Nachforderungen erstellt.',url('special-reports/'.$id),'important');
     }
 
     public function completeRevisionRequest(int $locationId,int $id,int $requestId): void

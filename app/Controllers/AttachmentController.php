@@ -37,6 +37,11 @@ final class AttachmentController
             if(!(new HouseBanRepository())->find((int)$attachment['record_id'],(int)active_location_id())){
                 throw new HttpException(404,'Anhang nicht gefunden.');
             }
+        } elseif ($attachment['module']==='messages') {
+            if(!Authorization::can('messages.read'))throw new HttpException(403,'Kein Zugriff auf diesen Anhang.');
+            if(!(new AnnouncementRepository())->findVisible((int)$attachment['record_id'],(int)\WKS\Core\Auth::id(),(int)active_location_id(),(string)(\WKS\Core\Auth::user()['role_code']??''))){
+                throw new HttpException(404,'Anhang nicht gefunden.');
+            }
         } else {
             throw new HttpException(403,'Dieser Anhangstyp ist derzeit nicht freigegeben.');
         }
