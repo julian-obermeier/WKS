@@ -282,4 +282,55 @@ final class MasterDataRepository
         $stmt->execute($data + ['id'=>$id,'location_id'=>$locationId]);
         return $id;
     }
+
+    public function syncEventMeasures(int $eventTypeId,int $locationId,array $measureIds): void
+    {
+        if(!$this->eventType($eventTypeId,$locationId)) throw new \\InvalidArgumentException('Ungültige Ereignisart.');
+        $pdo=Database::connection();$pdo->beginTransaction();
+        try{
+            $pdo->prepare('DELETE FROM event_type_measures WHERE event_type_id=:id')->execute(['id'=>$eventTypeId]);
+            $stmt=$pdo->prepare('INSERT IGNORE INTO event_type_measures (event_type_id,measure_id) VALUES (:event_type_id,:measure_id)');
+            foreach(array_unique(array_map('intval',$measureIds)) as $measureId){
+                if($measureId>0)$stmt->execute(['event_type_id'=>$eventTypeId,'measure_id'=>$measureId]);
+            }
+            $pdo->commit();
+        }catch(\\Throwable $e){$pdo->rollBack();throw $e;}
+    }
+
+    public function savePersonRole(?int $id,int $locationId,array $data): int
+    {
+        if($id===null){
+            $stmt=Database::connection()->prepare(
+                'INSERT INTO person_roles (location_id,name,active,sort_order,created_at,updated_at)
+                 VALUES (:location_id,:name,:active,:sort_order,NOW(),NOW())'
+            );
+            $stmt->execute($data+['location_id'=>$locationId]);
+            return (int)Database::connection()->lastInsertId();
+        }
+        $stmt=Database::connection()->prepare(
+            'UPDATE person_roles SET name=:name,active=:active,sort_order=:sort_order,updated_at=NOW()
+             WHERE id=:id AND (location_id=:location_id OR location_id IS NULL)'
+        );
+        $stmt->execute($data+['id'=>$id,'location_id'=>$locationId]);
+        return $id;
+    }
+
+    public function saveExternalOrganization(?int $id,int $locationId,array $data): int
+    {
+        if($id===null){
+            $stmt=Database::connection()->prepare(
+                'INSERT INTO external_organizations (location_id,organization_type,name,active,sort_order,created_at,updated_at)
+                 VALUES (:location_id,:organization_type,:name,:active,:sort_order,NOW(),NOW())'
+            );
+            $stmt->execute($data+['location_id'=>$locationId]);
+            return (int)Database::connection()->lastInsertId();
+        }
+        $stmt=Database::connection()->prepare(
+            'UPDATE external_organizations SET organization_type=:organization_type,name=:name,active=:active,sort_order=:sort_order,updated_at=NOW()
+             WHERE id=:id AND (location_id=:location_id OR location_id IS NULL)'
+        );
+        $stmt->execute($data+['id'=>$id,'location_id'=>$locationId]);
+        return $id;
+    }
+
 }

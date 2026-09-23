@@ -53,3 +53,35 @@ $router->get('/admin/audit', [AuditController::class, 'index'], ['auth', 'passwo
 
 $router->get('/admin/settings/security', [SettingsController::class, 'security'], ['auth', 'password', 'location', 'permission:system.settings.manage']);
 $router->post('/admin/settings/security', [SettingsController::class, 'updateSecurity'], ['auth', 'password', 'location', 'permission:system.settings.manage']);
+
+
+$router->get('/dutybook', [DutybookController::class, 'index'], ['auth','password','location','permission:dutybook.read']);
+$router->get('/dutybook/search', [DutybookController::class, 'search'], ['auth','password','location','permission:dutybook.read']);
+$router->get('/dutybook/create', [DutybookController::class, 'create'], ['auth','password','location','permission:dutybook.create']);
+$router->post('/dutybook', [DutybookController::class, 'store'], ['auth','password','location','permission:dutybook.create']);
+$router->get('/dutybook/{id}', [DutybookController::class, 'show'], ['auth','password','location','permission:dutybook.read']);
+$router->get('/dutybook/{id}/edit', [DutybookController::class, 'edit'], ['auth','password','location','permission:dutybook.edit']);
+$router->post('/dutybook/{id}', [DutybookController::class, 'update'], ['auth','password','location','permission:dutybook.edit']);
+$router->post('/dutybook/{id}/addendum', [DutybookController::class, 'addendum'], ['auth','password','location','permission:dutybook.addendum']);
+$router->get('/dutybook-export.csv', [DutybookController::class, 'exportCsv'], ['auth','password','location','permission:dutybook.export']);
+$router->get('/dutybook-print', [DutybookController::class, 'printDay'], ['auth','password','location','permission:dutybook.export']);
+
+$router->post('/shift/accept', [ShiftController::class, 'accept'], ['auth','password','location','permission:dutybook.create']);
+$router->post('/shift/{id}/end', [ShiftController::class, 'end'], ['auth','password','location','permission:dutybook.create']);
+
+$router->get('/handover/{sessionId}', [HandoverController::class, 'show'], ['auth','password','location','permission:dutybook.read']);
+$router->post('/handover/{sessionId}', [HandoverController::class, 'save'], ['auth','password','location','permission:dutybook.create']);
+$router->post('/handover/{sessionId}/confirm-outgoing', [HandoverController::class, 'confirmOutgoing'], ['auth','password','location','permission:dutybook.create']);
+$router->post('/handover/{sessionId}/confirm-incoming', [HandoverController::class, 'confirmIncoming'], ['auth','password','location','permission:dutybook.create']);
+
+$router->get('/attachments/{id}/download', [AttachmentController::class, 'download'], ['auth','password','location']);
+
+$router->get('/admin/dutybook', [DutybookConfigController::class, 'index'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/shift', [DutybookConfigController::class, 'saveShift'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/category', [DutybookConfigController::class, 'saveCategory'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/event-type', [DutybookConfigController::class, 'saveEventType'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/dynamic-field', [DutybookConfigController::class, 'saveDynamicField'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/place', [DutybookConfigController::class, 'savePlace'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/measure', [DutybookConfigController::class, 'saveMeasure'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/person-role', [DutybookConfigController::class, 'savePersonRole'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/external', [DutybookConfigController::class, 'saveExternal'], ['auth','password','location','permission:system.masterdata.manage']);
