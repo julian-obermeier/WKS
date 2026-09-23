@@ -40,6 +40,7 @@ use WKS\Controllers\ValuablesController;
 /** @var WKS\Core\Router $router */
 
 $router->get('/install', [InstallController::class, 'show']);
+$router->post('/install/configure', [InstallController::class, 'configure']);
 $router->post('/install', [InstallController::class, 'install']);
 
 $router->get('/login', [AuthController::class, 'showLogin']);
