@@ -1,4 +1,4 @@
-<?php $title = 'Dashboard'; ?>
+<?php $title = 'Dashboard'; $show=static fn(string $code): bool=>in_array($code,$dashboard['tiles']??[],true); ?>
 <div class="page-header">
     <div>
         <p class="eyebrow"><?= e($location['name'] ?? 'WKS') ?></p>
@@ -8,26 +8,26 @@
 </div>
 
 <div class="metric-grid">
-    <a class="metric-card" href="<?= e(url('dutybook')) ?>"><span class="metric-icon">◷</span><div><small>Aktuelle Schicht</small><strong><?= e($dashboard['current_shift']['shift_name'] ?? 'Nicht übernommen') ?></strong></div></a>
-    <a class="metric-card" href="<?= e(url('dutybook/search?status=open')) ?>"><span class="metric-icon">▤</span><div><small>Offene Dienstbuchvorgänge</small><strong><?= (int)$dashboard['open_dutybook'] ?></strong></div></a>
-    <a class="metric-card" href="<?= e(url('notifications')) ?>"><span class="metric-icon">◉</span><div><small>Ungelesene Benachrichtigungen</small><strong><?= (int)$dashboard['notification_unread'] ?></strong></div></a>
+    <?php if($show('current_shift')):?><a class="metric-card" href="<?= e(url('dutybook')) ?>"><span class="metric-icon">◷</span><div><small>Aktuelle Schicht</small><strong><?= e($dashboard['current_shift']['shift_name'] ?? 'Nicht übernommen') ?></strong><small><?= (int)$dashboard['attendance_count'] ?> anwesend</small></div></a><?php endif;?>
+    <?php if($show('open_dutybook')):?><a class="metric-card" href="<?= e(url('dutybook/search?status=open')) ?>"><span class="metric-icon">▤</span><div><small>Offene Dienstbuchvorgänge</small><strong><?= (int)$dashboard['open_dutybook'] ?></strong></div></a><?php endif;?>
+    <?php if($show('notifications')):?><a class="metric-card" href="<?= e(url('notifications')) ?>"><span class="metric-icon">◉</span><div><small>Ungelesene Benachrichtigungen</small><strong><?= (int)$dashboard['notification_unread'] ?></strong></div></a><?php endif;?>
 </div>
-<?php if (can('special_reports.review') || can('valuables.read')): ?>
+<?php if (($show('unreviewed_reports')&&can('special_reports.review')) || ($show('revision_reports')&&can('special_reports.read')) || ($show('valuables_metric')&&can('valuables.read'))): ?>
 <div class="metric-grid">
-    <?php if (can('special_reports.review')): ?><a class="metric-card" href="<?= e(url('special-reports/search?status=completed')) ?>"><span class="metric-icon">!</span><div><small>Ungeprüfte Sonderberichte</small><strong><?= (int)$dashboard['unreviewed_reports'] ?></strong></div></a><?php endif; ?>
-    <?php if (can('special_reports.read')): ?><a class="metric-card" href="<?= e(url('special-reports/search?status=revision_required')) ?>"><span class="metric-icon">↺</span><div><small>Nachbearbeitungen</small><strong><?= (int)$dashboard['revision_reports'] ?></strong></div></a><?php endif; ?>
-    <?php if (can('valuables.read')): ?><a class="metric-card" href="<?= e(url('valuables')) ?>"><span class="metric-icon">▣</span><div><small>Wertsachen / Kassetten</small><strong><?= (int)$dashboard['valuables']['stored_count'] ?> / <?= (int)$dashboard['valuables']['occupied_cassettes'] ?></strong></div></a><?php endif; ?>
+    <?php if ($show('unreviewed_reports')&&can('special_reports.review')): ?><a class="metric-card" href="<?= e(url('special-reports/search?status=completed')) ?>"><span class="metric-icon">!</span><div><small>Ungeprüfte Sonderberichte</small><strong><?= (int)$dashboard['unreviewed_reports'] ?></strong></div></a><?php endif; ?>
+    <?php if ($show('revision_reports')&&can('special_reports.read')): ?><a class="metric-card" href="<?= e(url('special-reports/search?status=revision_required')) ?>"><span class="metric-icon">↺</span><div><small>Nachbearbeitungen</small><strong><?= (int)$dashboard['revision_reports'] ?></strong></div></a><?php endif; ?>
+    <?php if ($show('valuables_metric')&&can('valuables.read')): ?><a class="metric-card" href="<?= e(url('valuables')) ?>"><span class="metric-icon">▣</span><div><small>Wertsachen / Kassetten</small><strong><?= (int)$dashboard['valuables']['stored_count'] ?> / <?= (int)$dashboard['valuables']['occupied_cassettes'] ?></strong></div></a><?php endif; ?>
 </div>
 <?php endif; ?>
 
-<?php if ($dashboard['announcements']): ?>
+<?php if ($show('announcements')&&$dashboard['announcements']): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Wichtige Mitteilungen</h2><p>Aktuell gültige Veröffentlichungen</p></div><a class="button ghost compact" href="<?= e(url('announcements')) ?>">Alle</a></div>
     <div class="timeline-list"><?php foreach ($dashboard['announcements'] as $a): ?><a class="timeline-item" href="<?= e(url('announcements/'.$a['id'])) ?>"><span class="badge <?= $a['priority']==='important'?'warning':'neutral' ?>"><?= $a['priority']==='important'?'Wichtig':'Info' ?></span> <strong><?= e($a['title']) ?></strong><?php if($a['require_ack']&&!$a['confirmed_at']): ?><small class="table-sub">Lesebestätigung offen</small><?php endif; ?></a><?php endforeach; ?></div>
 </div>
 <?php endif; ?>
 
-<?php if (can('dutybook.read')): ?>
+<?php if ($show('dutybook')&&can('dutybook.read')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Dienstbuch</h2><p>Schicht, Anwesenheit, offene Vorgänge und Übergaben</p></div></div>
     <div class="quick-grid">
@@ -38,7 +38,7 @@
 </div>
 <?php endif; ?>
 
-<?php if (can('special_reports.read')): ?>
+<?php if ($show('special_reports')&&can('special_reports.read')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Sonderberichte</h2><p>Dynamische Berichte mit Leitungsprüfung und Versionierung</p></div></div>
     <div class="quick-grid">
@@ -49,7 +49,7 @@
 </div>
 <?php endif; ?>
 
-<?php if (can('valuables.read')): ?>
+<?php if ($show('valuables')&&can('valuables.read')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Wertsachen</h2><p>Sichere Verwahrung, Kassetten und Siegel</p></div></div>
     <div class="quick-grid">
@@ -61,7 +61,7 @@
 </div>
 <?php endif; ?>
 
-<?php if (can('house_bans.read')): ?>
+<?php if ($show('house_bans')&&can('house_bans.read')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Hausverbote</h2><p>Eigenständige Hausverbotsliste des aktiven Standorts</p></div></div>
     <div class="quick-grid">
@@ -71,7 +71,7 @@
 </div>
 <?php endif; ?>
 
-<?php if (can('messages.read') || can('notifications.read')): ?>
+<?php if ($show('information')&&(can('messages.read') || can('notifications.read'))): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Informationen</h2><p>Mitteilungen und interne Benachrichtigungen</p></div></div>
     <div class="quick-grid">
@@ -81,7 +81,7 @@
 </div>
 <?php endif; ?>
 
-<?php if (can('system.users.manage') || can('system.locations.manage') || can('system.audit.view')): ?>
+<?php if ($show('administration')&&(can('system.users.manage') || can('system.locations.manage') || can('system.audit.view'))): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Administration</h2><p>Grundkonfiguration des Systems</p></div></div>
     <div class="quick-grid">

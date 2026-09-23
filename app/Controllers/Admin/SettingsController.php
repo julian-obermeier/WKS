@@ -8,6 +8,8 @@ use WKS\Core\Request;
 use WKS\Core\Response;
 use WKS\Core\View;
 use WKS\Repositories\SettingsRepository;
+use WKS\Repositories\RoleRepository;
+use WKS\Core\Database;
 use WKS\Services\AuditService;
 
 final class SettingsController
@@ -77,6 +79,76 @@ final class SettingsController
         ],[],$request);
         flash('success','Wertsachen-Einstellungen wurden gespeichert.');
         return Response::redirect(url('admin/settings/valuables'));
+    }
+
+
+    public function uploads(Request $request): Response
+    {
+        $repo=new SettingsRepository();
+        $settings=[
+            'max_mb'=>(int)$repo->get('uploads.max_mb',10),
+            'dutybook'=>(array)$repo->get('uploads.dutybook_extensions',['jpg','jpeg','png','pdf','docx']),
+            'special_report'=>(array)$repo->get('uploads.special_report_extensions',['jpg','jpeg','png','pdf','docx']),
+            'valuables'=>(array)$repo->get('uploads.valuables_extensions',['jpg','jpeg','png','pdf']),
+            'house_bans'=>(array)$repo->get('uploads.house_bans_extensions',['jpg','jpeg','png','pdf']),
+            'messages'=>(array)$repo->get('uploads.messages_extensions',['jpg','jpeg','png','pdf']),
+        ];
+        return View::render('admin/settings/uploads',compact('settings'));
+    }
+
+    public function updateUploads(Request $request): Response
+    {
+        $allowed=['jpg','jpeg','png','pdf','docx'];$repo=new SettingsRepository();$max=max(1,min(100,(int)$request->post('max_mb',10)));
+        $repo->set('uploads.max_mb',$max,'int',Auth::id());
+        foreach(['dutybook','special_report','valuables','house_bans','messages'] as $module){
+            $values=array_values(array_unique(array_intersect($allowed,array_map('strtolower',array_map('strval',(array)$request->post($module,[]))))));
+            if(in_array($module,['valuables','house_bans','messages'],true))$values=array_values(array_diff($values,['docx']));
+            $repo->set('uploads.'.$module.'_extensions',$values,'json',Auth::id());
+        }
+        (new AuditService())->log('upload_settings_updated','settings','uploads',null,['max_mb'=>$max],[],$request);
+        flash('success','Upload-Richtlinien wurden gespeichert.');
+        return Response::redirect(url('admin/settings/uploads'));
+    }
+
+    public function dashboard(Request $request): Response
+    {
+        $roles=(new RoleRepository())->all();$tiles=self::dashboardTiles();$assigned=[];
+        $stmt=Database::connection()->query('SELECT role_id,tile_code,visible FROM dashboard_role_tiles');
+        foreach($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row)$assigned[(int)$row['role_id']][$row['tile_code']]=(bool)$row['visible'];
+        return View::render('admin/settings/dashboard',compact('roles','tiles','assigned'));
+    }
+
+    public function updateDashboard(Request $request): Response
+    {
+        $tiles=self::dashboardTiles();$roles=(new RoleRepository())->all();$pdo=Database::connection();$pdo->beginTransaction();
+        try{
+            $stmt=$pdo->prepare(
+                'INSERT INTO dashboard_role_tiles (role_id,tile_code,visible,updated_at,updated_by)
+                 VALUES (:role_id,:tile_code,:visible,NOW(),:user_id)
+                 ON DUPLICATE KEY UPDATE visible=VALUES(visible),updated_at=NOW(),updated_by=VALUES(updated_by)'
+            );
+            foreach($roles as $role){
+                $selected=array_map('strval',(array)$request->post('role_'.$role['id'],[]));
+                foreach(array_keys($tiles) as $code)$stmt->execute([
+                    'role_id'=>$role['id'],'tile_code'=>$code,'visible'=>in_array($code,$selected,true)?1:0,'user_id'=>Auth::id()
+                ]);
+            }
+            $pdo->commit();
+        }catch(\Throwable $e){$pdo->rollBack();throw $e;}
+        (new AuditService())->log('dashboard_tiles_updated','settings','dashboard',null,null,[],$request);
+        flash('success','Dashboard-Sichtbarkeit wurde gespeichert.');
+        return Response::redirect(url('admin/settings/dashboard'));
+    }
+
+    private static function dashboardTiles(): array
+    {
+        return [
+            'current_shift'=>'Aktuelle Schicht','open_dutybook'=>'Offene Dienstbuchvorgänge','notifications'=>'Ungelesene Benachrichtigungen',
+            'unreviewed_reports'=>'Ungeprüfte Sonderberichte','revision_reports'=>'Nachbearbeitungen','valuables_metric'=>'Wertsachen / Kassetten',
+            'announcements'=>'Wichtige Mitteilungen','dutybook'=>'Dienstbuch-Schnellzugriff','special_reports'=>'Sonderbericht-Schnellzugriff',
+            'valuables'=>'Wertsachen-Schnellzugriff','house_bans'=>'Hausverbote-Schnellzugriff','information'=>'Informationen',
+            'administration'=>'Administration'
+        ];
     }
 
 }

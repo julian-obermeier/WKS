@@ -7,6 +7,7 @@ use finfo;
 use WKS\Core\Auth;
 use WKS\Core\Database;
 use WKS\Core\HttpException;
+use WKS\Repositories\SettingsRepository;
 
 final class UploadService
 {
@@ -17,7 +18,7 @@ final class UploadService
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>['docx'],
     ];
 
-    public function storeMany(string $module,int $recordId,array $files,int $maxBytes=10485760): array
+    public function storeMany(string $module,int $recordId,array $files,?int $maxBytes=null): array
     {
         $normalized=$this->normalize($files);
         $stored=[];
@@ -30,17 +31,31 @@ final class UploadService
         return $stored;
     }
 
-    public function store(string $module,int $recordId,array $file,int $maxBytes=10485760): int
+    public function store(string $module,int $recordId,array $file,?int $maxBytes=null): int
     {
         if(($file['error']??UPLOAD_ERR_OK)!==UPLOAD_ERR_OK) throw new HttpException(422,'Ein Anhang konnte nicht hochgeladen werden.');
         if(!isset($file['tmp_name'])||!is_uploaded_file((string)$file['tmp_name'])) throw new HttpException(422,'Ungültiger Datei-Upload.');
+        $settings=new SettingsRepository();
+        $maxBytes ??= max(1,(int)$settings->get('uploads.max_mb',10))*1024*1024;
         $size=(int)($file['size']??0);
         if($size<=0||$size>$maxBytes) throw new HttpException(422,'Ein Anhang ist leer oder überschreitet die maximal erlaubte Dateigröße.');
 
-        $allowed=self::DEFAULT_MIMES;
-        if(in_array($module,['valuables','house_bans','messages'],true)){
-            $allowed=array_intersect_key(self::DEFAULT_MIMES,array_flip(['image/jpeg','image/png','application/pdf']));
+        $key=match($module){
+            'dutybook'=>'uploads.dutybook_extensions',
+            'special_report'=>'uploads.special_report_extensions',
+            'valuables'=>'uploads.valuables_extensions',
+            'house_bans'=>'uploads.house_bans_extensions',
+            'messages'=>'uploads.messages_extensions',
+            default=>null
+        };
+        $configured=$key?(array)$settings->get($key,[]):[];
+        $configured=array_map('strtolower',array_map('strval',$configured));
+        $allowed=[];
+        foreach(self::DEFAULT_MIMES as $mime=>$extensions){
+            $matching=array_values(array_intersect($extensions,$configured));
+            if($matching!==[])$allowed[$mime]=$matching;
         }
+        if($allowed===[])throw new HttpException(422,'Für dieses Modul sind derzeit keine Dateitypen freigegeben.');
 
         $finfo=new finfo(FILEINFO_MIME_TYPE);
         $mime=(string)$finfo->file((string)$file['tmp_name']);

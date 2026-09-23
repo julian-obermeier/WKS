@@ -120,6 +120,8 @@ if ($user && active_location_id()) {
                     <?php if (can('system.settings.manage')): ?>
                         <a href="<?= e(url('admin/settings/security')) ?>" class="nav-link">⚙ <span>Sicherheit</span></a>
                         <a href="<?= e(url('admin/settings/valuables')) ?>" class="nav-link">▣ <span>Wertsachen-Einstellungen</span></a>
+                        <a href="<?= e(url('admin/settings/uploads')) ?>" class="nav-link">↑ <span>Upload-Richtlinien</span></a>
+                        <a href="<?= e(url('admin/settings/dashboard')) ?>" class="nav-link">⌂ <span>Dashboard-Kacheln</span></a>
                     <?php endif; ?>
                 <a href="<?= e(url('whats-new')) ?>" class="nav-link">✦ <span>Was ist neu?</span></a>
                     <a href="<?= e(url('help')) ?>" class="nav-link">? <span>Hilfe</span></a>

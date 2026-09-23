@@ -8,6 +8,7 @@ use WKS\Repositories\DutybookRepository;
 use WKS\Repositories\NotificationRepository;
 use WKS\Repositories\SpecialReportRepository;
 use WKS\Repositories\ValuablesRepository;
+use WKS\Core\Database;
 
 final class DashboardService
 {
@@ -21,8 +22,12 @@ final class DashboardService
         $unreviewed=$reports->search($locationId,['status'=>'completed'],1,1);
         $revision=$reports->search($locationId,['status'=>'revision_required'],1,1);
         $valuables=new ValuablesRepository();$vs=new ValuablesService();$counts=$valuables->counts($locationId,$vs->longTermDays());
+        $attendance=$current?count($duty->attendance((int)$current['id'])):0;
+        $roleStmt=Database::connection()->prepare('SELECT id FROM roles WHERE code=:code LIMIT 1');$roleStmt->execute(['code'=>$roleCode]);$roleId=(int)$roleStmt->fetchColumn();
+        $tilesStmt=Database::connection()->prepare('SELECT tile_code FROM dashboard_role_tiles WHERE role_id=:role_id AND visible=1');$tilesStmt->execute(['role_id'=>$roleId]);
+        $tiles=$tilesStmt->fetchAll(\PDO::FETCH_COLUMN);
         return [
-            'current_shift'=>$current,
+            'tiles'=>$tiles,'current_shift'=>$current,'attendance_count'=>$attendance,
             'open_dutybook'=>$open['total']+$inProgress['total']+$handover['total'],
             'unreviewed_reports'=>$unreviewed['total'],
             'revision_reports'=>$revision['total'],

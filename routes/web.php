@@ -228,3 +228,8 @@ $router->post('/autosave/discard', [AutosaveController::class, 'discard'], ['aut
 
 $router->get('/admin/notifications', [NotificationRuleController::class, 'index'], ['auth','password','location','permission:notifications.manage']);
 $router->post('/admin/notifications/rule', [NotificationRuleController::class, 'save'], ['auth','password','location','permission:notifications.manage']);
+
+$router->get('/admin/settings/uploads', [SettingsController::class, 'uploads'], ['auth','password','location','permission:system.settings.manage']);
+$router->post('/admin/settings/uploads', [SettingsController::class, 'updateUploads'], ['auth','password','location','permission:system.settings.manage']);
+$router->get('/admin/settings/dashboard', [SettingsController::class, 'dashboard'], ['auth','password','location','permission:system.settings.manage']);
+$router->post('/admin/settings/dashboard', [SettingsController::class, 'updateDashboard'], ['auth','password','location','permission:system.settings.manage']);
