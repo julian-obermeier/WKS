@@ -12,8 +12,11 @@ final class TrashRepository
     {
         $params=[];$where='1=1';
         if($search!==''){
-            $where='(t.summary LIKE :q OR t.module LIKE :q OR CAST(t.record_id AS CHAR) LIKE :q)';
-            $params['q']='%'.$search.'%';
+            $where='(t.summary LIKE :q_summary OR t.module LIKE :q_module OR CAST(t.record_id AS CHAR) LIKE :q_record)';
+            $like='%'.$search.'%';
+            $params['q_summary']=$like;
+            $params['q_module']=$like;
+            $params['q_record']=$like;
         }
         $stmt=Database::connection()->prepare(
             "SELECT t.*,l.name AS location_name,CONCAT(u.first_name,' ',u.last_name) AS deleted_by_name
