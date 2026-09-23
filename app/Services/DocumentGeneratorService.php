@@ -17,6 +17,7 @@ final class DocumentGeneratorService
             'footer'=>$template['footer_text'],
             'page_numbers'=>(bool)$template['show_page_numbers'],
             'layout'=>(string)($template['settings']['layout']??'standard'),
+            'logo_path'=>$template['logo_path']??null,
         ]);
     }
 
@@ -28,6 +29,7 @@ final class DocumentGeneratorService
             if($template['header_text'])$sections=['Kopfzeile'=>$template['header_text']]+$sections;
             if($template['footer_text'])$sections['Fußzeile']=$template['footer_text'];
             $options['layout']=(string)($template['settings']['layout']??'standard');
+            $options['logo_path']=$template['logo_path']??null;
         }
         return $this->docx($title,$sections,$options);
     }
@@ -36,6 +38,8 @@ final class DocumentGeneratorService
     {
         $layout=in_array((string)($options['layout']??'standard'),['standard','compact'],true)?(string)($options['layout']??'standard'):'standard';
         $compact=$layout==='compact';$fontSize=$compact?8:10;$leading=$compact?10:13;$wrapWidth=$compact?118:95;$linesPerPage=$compact?62:48;
+        $logo=$this->pdfLogo($options['logo_path']??null);
+        if($logo)$linesPerPage=max(20,$linesPerPage-4);
         $lines=[];
         if(!empty($options['header'])){$lines[]=(string)$options['header'];$lines[]='';}
         $lines[]=$title;
@@ -64,19 +68,30 @@ final class DocumentGeneratorService
         $pages=array_chunk($wrapped,$linesPerPage);
         if($pages===[])$pages=[[]];
         $objects=[];
-        $fontId=3;
+        $fontId=3;$logoId=$logo?4:null;
         $pageIds=[];
         $contentIds=[];
-        $nextId=4;
+        $nextId=$logo?5:4;
         foreach($pages as $_){$pageIds[]=$nextId++;$contentIds[]=$nextId++;}
 
         $objects[1]='<< /Type /Catalog /Pages 2 0 R >>';
         $kids=implode(' ',array_map(static fn(int $id):string=>$id.' 0 R',$pageIds));
         $objects[2]='<< /Type /Pages /Kids ['.$kids.'] /Count '.count($pageIds).' >>';
         $objects[$fontId]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+        if($logo&&$logoId!==null){
+            $objects[$logoId]='<< /Type /XObject /Subtype /Image /Width '.$logo['width'].' /Height '.$logo['height'].' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '.strlen($logo['data'])." >>\nstream\n".$logo['data']."\nendstream";
+        }
 
         foreach($pages as $i=>$pageLines){
-            $commands=["BT","/F1 ".$fontSize." Tf","48 790 Td",$leading." TL"];
+            $textY=$logo?748:790;$commands=[];
+            if($logo&&$logoId!==null){
+                $drawWidth=min(110.0,max(48.0,(float)$logo['width']));
+                $drawHeight=$drawWidth*((float)$logo['height']/max(1.0,(float)$logo['width']));
+                if($drawHeight>54.0){$drawHeight=54.0;$drawWidth=$drawHeight*((float)$logo['width']/max(1.0,(float)$logo['height']));}
+                $x=595-48-$drawWidth;$y=794-$drawHeight;
+                $commands[]='q';$commands[]=sprintf('%.2F 0 0 %.2F %.2F %.2F cm',$drawWidth,$drawHeight,$x,$y);$commands[]='/Logo Do';$commands[]='Q';
+            }
+            $commands[]="BT";$commands[]="/F1 ".$fontSize." Tf";$commands[]="48 ".$textY." Td";$commands[]=$leading." TL";
             if($watermark){
                 $wm=$this->pdfText($watermark);
                 $commands[]="q";
@@ -111,7 +126,8 @@ final class DocumentGeneratorService
             $contentId=$contentIds[$i];
             $pageId=$pageIds[$i];
             $objects[$contentId]='<< /Length '.strlen($stream)." >>\nstream\n".$stream."\nendstream";
-            $objects[$pageId]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents '.$contentId.' 0 R >>';
+            $xObject=$logo&&$logoId!==null?' /XObject << /Logo '.$logoId.' 0 R >>':'';
+            $objects[$pageId]='<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >>'.$xObject.' >> /Contents '.$contentId.' 0 R >>';
         }
 
         ksort($objects);
@@ -134,13 +150,15 @@ final class DocumentGeneratorService
         if(!class_exists(ZipArchive::class))throw new \RuntimeException('PHP-Erweiterung ZipArchive ist für DOCX nicht verfügbar.');
         $layout=in_array((string)($options['layout']??'standard'),['standard','compact'],true)?(string)($options['layout']??'standard'):'standard';
         $compact=$layout==='compact';$titleSize=$compact?28:32;$headingSize=$compact?21:24;$bodySize=$compact?18:20;$margin=$compact?720:1134;
+        $logo=$this->docxLogo($options['logo_path']??null);
         $dir=BASE_PATH.'/storage/generated';
         if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new \RuntimeException('Ausgabeverzeichnis kann nicht angelegt werden.');
         $path=$dir.'/'.bin2hex(random_bytes(20)).'.docx';
         $zip=new ZipArchive();
         if($zip->open($path,ZipArchive::CREATE|ZipArchive::OVERWRITE)!==true)throw new \RuntimeException('DOCX-Datei kann nicht erzeugt werden.');
 
-        $content='<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>';
+        $content='<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>';
+        if($logo)$content.=$this->docxLogoParagraph($logo);
         $content.=$this->paragraph($title,true,$titleSize);
         foreach($sections as $heading=>$value){
             if($heading!=='')$content.=$this->paragraph((string)$heading,true,$headingSize);
@@ -152,11 +170,60 @@ final class DocumentGeneratorService
         }
         $content.='<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="'.$margin.'" w:right="'.$margin.'" w:bottom="'.$margin.'" w:left="'.$margin.'"/></w:sectPr></w:body></w:document>';
 
-        $zip->addFromString('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+        $imageType=$logo?'<Default Extension="'.$logo['extension'].'" ContentType="'.$logo['mime'].'"/>':'';
+        $zip->addFromString('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'.$imageType.'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
         $zip->addFromString('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+        if($logo){
+            $zip->addFromString('word/media/logo.'.$logo['extension'],$logo['data']);
+            $zip->addFromString('word/_rels/document.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.'.$logo['extension'].'"/></Relationships>');
+        }
         $zip->addFromString('word/document.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'.$content);
         $zip->close();
         return $path;
+    }
+
+    private function logoPath(mixed $relative): ?string
+    {
+        $relative=trim((string)($relative??''));if($relative==='')return null;
+        $root=realpath(BASE_PATH.'/storage/generated');$path=realpath(BASE_PATH.'/storage/generated/'.$relative);
+        if(!$root||!$path||!str_starts_with($path,$root.DIRECTORY_SEPARATOR)||!is_file($path))return null;
+        return $path;
+    }
+
+    private function pdfLogo(mixed $relative): ?array
+    {
+        $path=$this->logoPath($relative);if(!$path)return null;
+        $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);
+        $data=(string)file_get_contents($path);
+        if($mime==='image/png'){
+            if(!function_exists('imagecreatefromstring')||!function_exists('imagejpeg'))throw new \RuntimeException('PNG-Logo benötigt die PHP-GD-Erweiterung für PDF-Ausgaben.');
+            $source=@imagecreatefromstring($data);if(!$source)throw new \RuntimeException('PNG-Logo konnte nicht gelesen werden.');
+            $width=imagesx($source);$height=imagesy($source);$canvas=imagecreatetruecolor($width,$height);
+            $white=imagecolorallocate($canvas,255,255,255);imagefill($canvas,0,0,$white);imagecopy($canvas,$source,0,0,0,0,$width,$height);
+            ob_start();imagejpeg($canvas,null,92);$data=(string)ob_get_clean();imagedestroy($canvas);imagedestroy($source);
+        } elseif($mime!=='image/jpeg'){
+            throw new \RuntimeException('Dokumentlogo muss PNG oder JPEG sein.');
+        }
+        $size=@getimagesizefromstring($data);if(!$size||($size[0]??0)<1||($size[1]??0)<1)throw new \RuntimeException('Dokumentlogo hat ungültige Bildabmessungen.');
+        return ['data'=>$data,'width'=>(int)$size[0],'height'=>(int)$size[1]];
+    }
+
+    private function docxLogo(mixed $relative): ?array
+    {
+        $path=$this->logoPath($relative);if(!$path)return null;
+        $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($path);$extension=$mime==='image/png'?'png':($mime==='image/jpeg'?'jpeg':null);
+        if(!$extension)throw new \RuntimeException('Dokumentlogo muss PNG oder JPEG sein.');
+        $data=(string)file_get_contents($path);$size=@getimagesizefromstring($data);
+        if(!$size||($size[0]??0)<1||($size[1]??0)<1)throw new \RuntimeException('Dokumentlogo hat ungültige Bildabmessungen.');
+        return ['data'=>$data,'mime'=>$mime,'extension'=>$extension,'width'=>(int)$size[0],'height'=>(int)$size[1]];
+    }
+
+    private function docxLogoParagraph(array $logo): string
+    {
+        $maxWidth=140;$width=min($maxWidth,max(48,(int)$logo['width']));$height=(int)round($width*((int)$logo['height']/max(1,(int)$logo['width'])));
+        if($height>70){$height=70;$width=(int)round($height*((int)$logo['width']/max(1,(int)$logo['height'])));}
+        $cx=$width*9525;$cy=$height*9525;
+        return '<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'.$cx.'" cy="'.$cy.'"/><wp:docPr id="1" name="WKS Logo"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="Logo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'.$cx.'" cy="'.$cy.'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
     }
 
     private function paragraph(string $text,bool $bold=false,int $size=20): string
