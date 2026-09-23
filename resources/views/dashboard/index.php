@@ -24,6 +24,17 @@
 </div>
 <?php endif; ?>
 
+<?php if (can('special_reports.read')): ?>
+<div class="panel">
+    <div class="panel-header"><div><h2>Sonderberichte</h2><p>Dynamische Berichte mit Leitungsprüfung und Versionierung</p></div></div>
+    <div class="quick-grid">
+        <a class="quick-card" href="<?= e(url('special-reports')) ?>"><span>▧</span><strong>Arbeitsübersicht</strong><small>Entwürfe, Nachbearbeitung und Prüfung</small></a>
+        <?php if (can('special_reports.create')): ?><a class="quick-card" href="<?= e(url('special-reports/create')) ?>"><span>＋</span><strong>Sonderbericht</strong><small>Bericht direkt erfassen</small></a><?php endif; ?>
+        <a class="quick-card" href="<?= e(url('special-reports/search')) ?>"><span>⌕</span><strong>Berichtssuche</strong><small>Archiv und Volltextsuche</small></a>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (can('system.users.manage') || can('system.locations.manage') || can('system.audit.view')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Administration</h2><p>Grundkonfiguration des Systems</p></div></div>

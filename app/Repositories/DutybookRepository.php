@@ -71,7 +71,7 @@ final class DutybookRepository
     public function entriesForDay(int $locationId, string $dutyDate): array
     {
         $stmt = Database::connection()->prepare(
-            'SELECT e.*,c.name AS category_name,t.name AS event_type_name,s.name AS shift_name,
+            'SELECT e.*,c.name AS category_name,t.name AS event_type_name,t.offer_special_report,t.offer_valuables,s.name AS shift_name,
                     CONCAT(u.first_name," ",u.last_name) AS creator_name,p.name AS place_name,
                     (SELECT COUNT(*) FROM attachments a WHERE a.module="dutybook" AND a.record_id=e.id AND a.deleted_at IS NULL) AS attachment_count
              FROM dutybook_entries e
