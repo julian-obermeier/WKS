@@ -8,10 +8,24 @@
 </div>
 
 <div class="metric-grid">
-    <div class="metric-card"><span class="metric-icon">⌖</span><div><small>Aktiver Standort</small><strong><?= e($location['name'] ?? '–') ?></strong></div></div>
-    <div class="metric-card"><span class="metric-icon">♙</span><div><small>Rolle</small><strong><?= e($user['role_name'] ?? '–') ?></strong></div></div>
-    <div class="metric-card"><span class="metric-icon">✓</span><div><small>Kontostatus</small><strong>Aktiv</strong></div></div>
+    <a class="metric-card" href="<?= e(url('dutybook')) ?>"><span class="metric-icon">◷</span><div><small>Aktuelle Schicht</small><strong><?= e($dashboard['current_shift']['shift_name'] ?? 'Nicht übernommen') ?></strong></div></a>
+    <a class="metric-card" href="<?= e(url('dutybook/search?status=open')) ?>"><span class="metric-icon">▤</span><div><small>Offene Dienstbuchvorgänge</small><strong><?= (int)$dashboard['open_dutybook'] ?></strong></div></a>
+    <a class="metric-card" href="<?= e(url('notifications')) ?>"><span class="metric-icon">◉</span><div><small>Ungelesene Benachrichtigungen</small><strong><?= (int)$dashboard['notification_unread'] ?></strong></div></a>
 </div>
+<?php if (can('special_reports.review') || can('valuables.read')): ?>
+<div class="metric-grid">
+    <?php if (can('special_reports.review')): ?><a class="metric-card" href="<?= e(url('special-reports/search?status=completed')) ?>"><span class="metric-icon">!</span><div><small>Ungeprüfte Sonderberichte</small><strong><?= (int)$dashboard['unreviewed_reports'] ?></strong></div></a><?php endif; ?>
+    <?php if (can('special_reports.read')): ?><a class="metric-card" href="<?= e(url('special-reports/search?status=revision_required')) ?>"><span class="metric-icon">↺</span><div><small>Nachbearbeitungen</small><strong><?= (int)$dashboard['revision_reports'] ?></strong></div></a><?php endif; ?>
+    <?php if (can('valuables.read')): ?><a class="metric-card" href="<?= e(url('valuables')) ?>"><span class="metric-icon">▣</span><div><small>Wertsachen / Kassetten</small><strong><?= (int)$dashboard['valuables']['stored_count'] ?> / <?= (int)$dashboard['valuables']['occupied_cassettes'] ?></strong></div></a><?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($dashboard['announcements']): ?>
+<div class="panel">
+    <div class="panel-header"><div><h2>Wichtige Mitteilungen</h2><p>Aktuell gültige Veröffentlichungen</p></div><a class="button ghost compact" href="<?= e(url('announcements')) ?>">Alle</a></div>
+    <div class="timeline-list"><?php foreach ($dashboard['announcements'] as $a): ?><a class="timeline-item" href="<?= e(url('announcements/'.$a['id'])) ?>"><span class="badge <?= $a['priority']==='important'?'warning':'neutral' ?>"><?= $a['priority']==='important'?'Wichtig':'Info' ?></span> <strong><?= e($a['title']) ?></strong><?php if($a['require_ack']&&!$a['confirmed_at']): ?><small class="table-sub">Lesebestätigung offen</small><?php endif; ?></a><?php endforeach; ?></div>
+</div>
+<?php endif; ?>
 
 <?php if (can('dutybook.read')): ?>
 <div class="panel">

@@ -25,6 +25,8 @@ if ($user && active_location_id()) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <title><?= isset($title) ? e($title) . ' – ' : '' ?>WKS</title>
+    <link rel="manifest" href="<?= e(url('manifest.webmanifest')) ?>">
+    <meta name="theme-color" content="#174f7c">
     <link rel="stylesheet" href="<?= e(asset('app.css')) ?>">
 </head>
 <body>
@@ -61,6 +63,8 @@ if ($user && active_location_id()) {
             <aside class="sidebar">
                 <nav>
                     <a href="<?= e(url()) ?>" class="nav-link">⌂ <span>Dashboard</span></a>
+                    <?php if (can('search.use')): ?><a href="<?= e(url('search')) ?>" class="nav-link">⌕ <span>Globale Suche</span></a><?php endif; ?>
+                    <?php if (can('statistics.view')): ?><a href="<?= e(url('statistics')) ?>" class="nav-link">◫ <span>Statistik</span></a><?php endif; ?>
                     <?php if (can('dutybook.read')): ?>
                         <a href="<?= e(url('dutybook')) ?>" class="nav-link">▤ <span>Dienstbuch</span></a>
                     <?php endif; ?>
@@ -110,6 +114,7 @@ if ($user && active_location_id()) {
                         <a href="<?= e(url('admin/settings/security')) ?>" class="nav-link">⚙ <span>Sicherheit</span></a>
                         <a href="<?= e(url('admin/settings/valuables')) ?>" class="nav-link">▣ <span>Wertsachen-Einstellungen</span></a>
                     <?php endif; ?>
+                <a href="<?= e(url('help')) ?>" class="nav-link">? <span>Hilfe</span></a>
                 </nav>
                 <div class="sidebar-footer">Version <?= e(config('app.version', 'dev')) ?></div>
             </aside>
