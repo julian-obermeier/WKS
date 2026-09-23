@@ -67,10 +67,12 @@ final class DutybookConfigController
         $allowed=['text','textarea','number','date','time','datetime','select','multiselect','checkbox','yesno'];
         if(!in_array($type,$allowed,true))throw new HttpException(422,'Ungültiger Feldtyp.');
         $options=array_values(array_filter(array_map('trim',preg_split('/\r\n|\r|\n/',(string)$request->post('options',''))?:[])));
+        $definitionId=(int)$request->post('definition_id');$sortOrder=(int)$request->post('sort_order',0);
         $data=[
-            'definition_id'=>(int)$request->post('definition_id'),'field_key'=>preg_replace('/[^a-z0-9_]/','_',strtolower(trim((string)$request->post('field_key')))),
+            'definition_id'=>$definitionId,'field_key'=>preg_replace('/[^a-z0-9_]/','_',strtolower(trim((string)$request->post('field_key')))),
             'label'=>trim((string)$request->post('label')),'field_type'=>$type,'required'=>$request->post('required')?1:0,
-            'sort_order'=>(int)$request->post('sort_order',0),'options_json'=>$options===[]?null:json_encode($options,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
+            'sort_order'=>$sortOrder,'options_json'=>$options===[]?null:json_encode($options,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
+            'visibility_json'=>$this->visibilityJson($request,'dutybook_event',$definitionId,$id,$sortOrder),
             'active'=>$request->post('active')?1:0
         ];
         if($data['definition_id']<1||$data['field_key']===''||$data['label']==='')throw new HttpException(422,'Ereignisart, Feldschlüssel und Bezeichnung sind erforderlich.');
@@ -126,6 +128,19 @@ final class DutybookConfigController
         if($data['organization_type']===''||$data['name']==='')throw new HttpException(422,'Typ und Bezeichnung sind erforderlich.');
         $saved=(new MasterDataRepository())->saveExternalOrganization($id,(int)active_location_id(),$data);
         $this->audit('external_organization_saved',$saved,$data,$request);return $this->back('Externe Stelle wurde gespeichert.');
+    }
+
+    private function visibilityJson(Request $request,string $module,int $definitionId,?int $currentId,int $sortOrder): ?string
+    {
+        $fieldId=(int)$request->post('visibility_field_id',0);
+        if($fieldId<=0)return null;
+        $value=trim((string)$request->post('visibility_value',''));
+        if($value==='')throw new HttpException(422,'Für die Sichtbarkeitsbedingung ist ein Vergleichswert erforderlich.');
+        $fields=(new MasterDataRepository())->dynamicFields($module,$definitionId,false);$target=null;
+        foreach($fields as $field)if((int)$field['id']===$fieldId){$target=$field;break;}
+        if(!$target||($currentId!==null&&$fieldId===$currentId))throw new HttpException(422,'Ungültiges Steuerfeld für die Sichtbarkeitsbedingung.');
+        if((int)$target['sort_order']>=$sortOrder)throw new HttpException(422,'Das Steuerfeld muss in der Sortierung vor dem abhängigen Feld liegen.');
+        return json_encode(['field_id'=>$fieldId,'value'=>$value],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
     }
 
     private function id(Request $request): ?int{$id=(int)$request->post('id',0);return $id>0?$id:null;}

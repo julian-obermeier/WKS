@@ -41,6 +41,7 @@ use WKS\Services\AnnouncementService;
 use WKS\Services\AuthService;
 use WKS\Services\DocumentGeneratorService;
 use WKS\Services\DraftAutosaveService;
+use WKS\Services\DynamicFormService;
 use WKS\Services\DutybookService;
 use WKS\Services\HandoverService;
 use WKS\Services\HouseBanService;
@@ -148,6 +149,17 @@ $master->saveDynamicField($dynamicId,$gi,[
     'definition_id'=>$eventId,'field_key'=>'integration_code','label'=>'Integrationscode geändert','field_type'=>'text',
     'required'=>1,'sort_order'=>10,'options_json'=>null,'active'=>1
 ],$adminId);
+$conditionalId=$master->saveDynamicField(null,$gi,[
+    'definition_id'=>$eventId,'field_key'=>'integration_conditional','label'=>'Bedingtes Pflichtfeld','field_type'=>'text',
+    'required'=>1,'sort_order'=>20,'options_json'=>null,
+    'visibility_json'=>json_encode(['field_id'=>$dynamicId,'value'=>'show'],JSON_THROW_ON_ERROR),
+    'active'=>1
+],$adminId);
+$dynamicValidation=new DynamicFormService();
+$hiddenValidation=$dynamicValidation->validateDutybookValues($eventId,[$dynamicId=>'hide',$conditionalId=>'manipulated']);
+$assert($hiddenValidation['errors']===[]&&!array_key_exists($conditionalId,$hiddenValidation['values']),'hidden dynamic field is ignored server-side');
+$visibleValidation=$dynamicValidation->validateDutybookValues($eventId,[$dynamicId=>'show']);
+$assert($visibleValidation['errors']!==[],'visible conditional required field is enforced server-side');
 $placeId=$master->savePlace(null,$gi,['parent_id'=>null,'place_type'=>'building','name'=>'CI Gebäude','sort_order'=>990,'active'=>1]);
 $assert($master->places($mr)!==array_filter($master->places($gi),static fn(array $p):bool=>(int)$p['id']===$placeId),'site-specific place data is separated');
 

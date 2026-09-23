@@ -25,8 +25,8 @@ $external=(array)old('external',$editing?$entry['external']:[]);
 <div class="form-grid dynamic-group" data-dynamic-event="<?= (int)$eventId ?>">
 <?php foreach($fields as $field):
 $value=$oldDynamic[$field['id']]??($editing&&isset($entry['dynamic_values'][$field['id']])?$entry['dynamic_values'][$field['id']]['value']:'');
-$name='dynamic['.(int)$field['id'].']';?>
-<label><?= e($field['label']) ?><?= $field['required']?'*':'' ?>
+$name='dynamic['.(int)$field['id'].']';$vis=(array)($field['visibility']??[]);?>
+<label data-dynamic-field="<?= (int)$field['id'] ?>"<?= !empty($vis['field_id'])?' data-dynamic-condition-field="'.(int)$vis['field_id'].'" data-dynamic-condition-value="'.e((string)($vis['value']??'')).'"':'' ?>><?= e($field['label']) ?><?= $field['required']?'*':'' ?>
 <?php if($field['field_type']==='textarea'):?><textarea name="<?= e($name) ?>" <?= $field['required']?'required':'' ?>><?= e($value) ?></textarea>
 <?php elseif($field['field_type']==='select'):?><select name="<?= e($name) ?>" <?= $field['required']?'required':'' ?>><option value="">Bitte wählen …</option><?php foreach($field['options'] as $opt):?><option value="<?= e($opt) ?>" <?= (string)$value===(string)$opt?'selected':'' ?>><?= e($opt) ?></option><?php endforeach;?></select>
 <?php elseif($field['field_type']==='multiselect'):?><select name="<?= e($name) ?>[]" multiple <?= $field['required']?'required':'' ?>><?php foreach($field['options'] as $opt):?><option value="<?= e($opt) ?>" <?= in_array((string)$opt,(array)$value,true)?'selected':'' ?>><?= e($opt) ?></option><?php endforeach;?></select>

@@ -22,28 +22,25 @@ final class DynamicFormService
     private function validate(string $module,int $definitionId,array $input): array
     {
         $fields=(new MasterDataRepository())->dynamicFields($module,$definitionId);
-        $values=[];
-        $errors=[];
+        $normalized=[];$types=[];$errors=[];
 
         foreach($fields as $field){
-            $id=(int)$field['id'];
-            $raw=$input[$id]??null;
-            $type=(string)$field['field_type'];
-
+            $id=(int)$field['id'];$type=(string)$field['field_type'];$types[$id]=$type;
             if(!in_array($type,self::TYPES,true)){
                 $errors[]='Unbekannter Feldtyp bei „'.$field['label'].'“.';
                 continue;
             }
+            $normalized[$id]=$this->normalize($type,$input[$id]??null);
+        }
 
-            if($type==='multiselect'){
-                $value=array_values(array_filter(array_map('strval',(array)$raw),static fn(string $v):bool=>$v!==''));
-            } elseif($type==='checkbox'){
-                $value=$raw ? true : false;
-            } else {
-                $value=is_array($raw)?'':trim((string)($raw??''));
-            }
+        $values=[];
+        foreach($fields as $field){
+            $id=(int)$field['id'];$type=$types[$id]??'';
+            if(!in_array($type,self::TYPES,true))continue;
+            if(!$this->isVisible($field,$normalized))continue;
 
-            $empty=($value===''||$value===null||$value===[]);
+            $value=$normalized[$id]??null;
+            $empty=$type==='checkbox' ? $value!==true : ($value===''||$value===null||$value===[]);
             if((bool)$field['required']&&$empty){
                 $errors[]='Das Zusatzfeld „'.$field['label'].'“ ist erforderlich.';
                 continue;
@@ -69,5 +66,26 @@ final class DynamicFormService
         }
 
         return ['values'=>$values,'errors'=>$errors,'fields'=>$fields];
+    }
+
+    private function normalize(string $type,mixed $raw): mixed
+    {
+        if($type==='multiselect'){
+            return array_values(array_filter(array_map('strval',(array)$raw),static fn(string $v):bool=>$v!==''));
+        }
+        if($type==='checkbox')return (bool)$raw;
+        return is_array($raw)?'':trim((string)($raw??''));
+    }
+
+    private function isVisible(array $field,array $values): bool
+    {
+        $visibility=(array)($field['visibility']??[]);
+        $fieldId=(int)($visibility['field_id']??0);
+        if($fieldId<=0)return true;
+        $expected=(string)($visibility['value']??'');
+        $actual=$values[$fieldId]??null;
+        if(is_array($actual))return in_array($expected,array_map('strval',$actual),true);
+        if(is_bool($actual))$actual=$actual?'1':'0';
+        return (string)($actual??'')===$expected;
     }
 }

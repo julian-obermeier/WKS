@@ -15,13 +15,40 @@
         field.addEventListener('input', () => field.classList.remove('field-invalid'));
     });
 
+    const dynamicControlValue = (group, fieldId) => {
+        const controls = [...group.querySelectorAll(`[name="dynamic[${fieldId}]"], [name="dynamic[${fieldId}][]"]`)].filter((field) => !field.disabled);
+        if (!controls.length) return '';
+        const first = controls[0];
+        if (first.type === 'checkbox') return first.checked ? '1' : '0';
+        if (first.multiple) return [...first.selectedOptions].map((option) => option.value);
+        return first.value ?? '';
+    };
+
     const syncDynamic = () => {
         const select = document.querySelector('[data-event-type-select]');
         if (!select) return;
         document.querySelectorAll('[data-dynamic-event]').forEach((group) => {
             const active = group.dataset.dynamicEvent === select.value;
             group.classList.toggle('active', active);
-            group.querySelectorAll('input,select,textarea').forEach((field) => field.disabled = !active);
+            group.querySelectorAll('[data-dynamic-field]').forEach((wrapper) => {
+                wrapper.querySelectorAll('input,select,textarea').forEach((field) => {
+                    if (field.dataset.dynamicRequired === undefined) field.dataset.dynamicRequired = field.required ? '1' : '0';
+                    field.disabled = !active;
+                    field.required = active && field.dataset.dynamicRequired === '1';
+                });
+                wrapper.hidden = !active;
+            });
+            if (!active) return;
+            group.querySelectorAll('[data-dynamic-field][data-dynamic-condition-field]').forEach((wrapper) => {
+                const actual = dynamicControlValue(group, wrapper.dataset.dynamicConditionField);
+                const expected = wrapper.dataset.dynamicConditionValue ?? '';
+                const visible = Array.isArray(actual) ? actual.includes(expected) : String(actual) === expected;
+                wrapper.hidden = !visible;
+                wrapper.querySelectorAll('input,select,textarea').forEach((field) => {
+                    field.disabled = !visible;
+                    field.required = visible && field.dataset.dynamicRequired === '1';
+                });
+            });
         });
         document.querySelectorAll('[data-event-category]').forEach((el) => {
             el.hidden = el.dataset.eventCategory !== select.value;
@@ -32,6 +59,12 @@
         });
     };
     document.querySelector('[data-event-type-select]')?.addEventListener('change', syncDynamic);
+    document.addEventListener('input', (event) => {
+        if (event.target.closest('[data-dynamic-event]')) syncDynamic();
+    });
+    document.addEventListener('change', (event) => {
+        if (event.target.closest('[data-dynamic-event]')) syncDynamic();
+    });
     syncDynamic();
 
     document.querySelectorAll('[data-repeat-add]').forEach((button) => {

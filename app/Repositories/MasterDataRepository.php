@@ -84,7 +84,12 @@ final class MasterDataRepository
              ORDER BY e.sort_order, e.name, f.sort_order, f.id'
         );
         $stmt->execute(['location_id' => $locationId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$row){
+            $row['options']=$row['options_json']?(json_decode((string)$row['options_json'],true)?:[]):[];
+            $row['visibility']=$row['visibility_json']?(json_decode((string)$row['visibility_json'],true)?:[]):[];
+        }
+        return $rows;
     }
 
     public function personRoles(int $locationId): array
@@ -228,7 +233,7 @@ final class MasterDataRepository
             $stmt = Database::connection()->prepare(
                 'INSERT INTO dynamic_fields
                  (module,definition_id,field_key,label,field_type,required,sort_order,options_json,visibility_json,active,created_at,updated_at,created_by,updated_by)
-                 VALUES ("dutybook_event",:definition_id,:field_key,:label,:field_type,:required,:sort_order,:options_json,NULL,:active,NOW(),NOW(),:created_by,:updated_by)'
+                 VALUES ("dutybook_event",:definition_id,:field_key,:label,:field_type,:required,:sort_order,:options_json,:visibility_json,:active,NOW(),NOW(),:created_by,:updated_by)'
             );
             $stmt->execute($data + ['created_by'=>$userId,'updated_by'=>$userId]);
             return (int) Database::connection()->lastInsertId();
@@ -343,14 +348,14 @@ final class MasterDataRepository
         if($id===null){
             $stmt=Database::connection()->prepare(
                 'INSERT INTO dynamic_fields (module,definition_id,field_key,label,section_name,field_type,required,sort_order,options_json,visibility_json,active,created_at,updated_at,created_by,updated_by)
-                 VALUES (:module,:definition_id,:field_key,:label,:section_name,:field_type,:required,:sort_order,:options_json,NULL,:active,NOW(),NOW(),:created_by,:updated_by)'
+                 VALUES (:module,:definition_id,:field_key,:label,:section_name,:field_type,:required,:sort_order,:options_json,:visibility_json,:active,NOW(),NOW(),:created_by,:updated_by)'
             );
             $stmt->execute($data+['module'=>$module,'created_by'=>$userId,'updated_by'=>$userId]);
             return (int)Database::connection()->lastInsertId();
         }
         $stmt=Database::connection()->prepare(
             'UPDATE dynamic_fields SET definition_id=:definition_id,field_key=:field_key,label=:label,section_name=:section_name,field_type=:field_type,
-             required=:required,sort_order=:sort_order,options_json=:options_json,active=:active,updated_at=NOW(),updated_by=:user_id
+             required=:required,sort_order=:sort_order,options_json=:options_json,visibility_json=:visibility_json,active=:active,updated_at=NOW(),updated_by=:user_id
              WHERE id=:id AND module=:module'
         );
         $stmt->execute($data+['id'=>$id,'module'=>$module,'user_id'=>$userId]);
