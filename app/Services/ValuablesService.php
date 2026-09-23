@@ -155,6 +155,7 @@ final class ValuablesService
     public function addNote(int $locationId,int $recordId,string $text): void
     {
         $repo=new ValuablesRepository();$record=$repo->find($recordId,$locationId);if(!$record)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+        if($record['status']!=='stored')throw new HttpException(422,'Interne Notizen können nur während der aktiven Verwahrung ergänzt werden. Nach der Auslagerung ist der Vorgang gesperrt.');
         $text=trim($text);if($text==='')throw new HttpException(422,'Die Notiz darf nicht leer sein.');
         $id=$repo->addNote($recordId,$text,(int)Auth::id());
         (new AuditService())->log('valuables_note_added','valuables',(string)$recordId,null,['note_id'=>$id],[],null,Auth::id(),$locationId);
