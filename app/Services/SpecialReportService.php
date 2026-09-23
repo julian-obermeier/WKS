@@ -180,14 +180,14 @@ final class SpecialReportService
         $people=array_map(static fn(array $p):string=>trim(($p['role_name']??$p['person_type']??'Person').': '.($p['first_name']??'').' '.($p['last_name']??'')),(array)$r['people']);
         $staff=array_map(static fn(array $u):string=>$u['first_name'].' '.$u['last_name'],(array)$r['staff']);
         $external=array_map(static fn(array $x):string=>trim(($x['organization_master_name']??$x['organization_name']??'').'; '.($x['contact_name']??'').'; '.($x['reference_number']??'')),(array)$r['external']);
-        $dynamic=[];foreach((array)$r['dynamic_values'] as $v)$dynamic[]=$v['label'].': '.(is_array($v['value'])?implode(', ',$v['value']):(string)$v['value']);
+        $dynamic=[];foreach((array)$r['dynamic_values'] as $v){$section=trim((string)($v['section_name']??''))?:'Zusatzangaben';$dynamic[$section][]=$v['label'].': '.(is_array($v['value'])?implode(', ',$v['value']):(is_bool($v['value'])?($v['value']?'Ja':'Nein'):(string)$v['value']));}
         $sections=[
             'Bericht'=>sprintf('SB %04d/%d · %s',(int)$r['report_number'],(int)$r['report_year'],$r['report_type_name']),
             'Einsatz'=>sprintf('%s bis %s · %s',format_datetime($r['incident_started_at']),format_datetime($r['incident_ended_at']),trim(($r['place_name']??'').' '.($r['place_free_text']??''))),
             'Beteiligte Personen'=>$people,'Beteiligte Mitarbeiter'=>$staff,'Sachverhalt'=>$r['facts'],
             'Maßnahmen'=>$r['measures_text']??'','Ergebnis'=>$r['result_text']??'','Externe Stellen'=>$external
         ];
-        if($dynamic!==[])$sections['Zusatzfelder']=$dynamic;
+        foreach($dynamic as $section=>$rows)$sections[$section]=$rows;
         if($r['injury'])$sections['Verletzungen / medizinische Maßnahmen']=[
             'Verletzung vorhanden: '.($r['injury']['injury_present']?'Ja':'Nein'),
             'Beschreibung: '.($r['injury']['description']??''),'Versorgung: '.($r['injury']['medical_care']??''),

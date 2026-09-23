@@ -214,7 +214,7 @@ final class SpecialReportRepository
     }
     public function dynamicValues(int $id): array
     {
-        $s=Database::connection()->prepare('SELECT v.field_id,v.value_json,f.label,f.field_type FROM dynamic_values v JOIN dynamic_fields f ON f.id=v.field_id WHERE v.module="special_report" AND v.record_id=:id ORDER BY f.sort_order,f.id');$s->execute(['id'=>$id]);$out=[];foreach($s->fetchAll(PDO::FETCH_ASSOC) as $x){$x['value']=json_decode((string)$x['value_json'],true);$out[(int)$x['field_id']]=$x;}return $out;
+        $s=Database::connection()->prepare('SELECT v.field_id,v.value_json,f.label,f.section_name,f.field_type FROM dynamic_values v JOIN dynamic_fields f ON f.id=v.field_id WHERE v.module="special_report" AND v.record_id=:id ORDER BY f.sort_order,f.id');$s->execute(['id'=>$id]);$out=[];foreach($s->fetchAll(PDO::FETCH_ASSOC) as $x){$x['value']=json_decode((string)$x['value_json'],true);$out[(int)$x['field_id']]=$x;}return $out;
     }
     public function attachments(int $id): array
     {
