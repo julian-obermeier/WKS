@@ -92,7 +92,7 @@ foreach($scanRoots as $root){
 }
 
 foreach([
-    'public/index.php','public/.htaccess','public/manifest.webmanifest','public/service-worker.js',
+    'public/index.php','public/.htaccess','public/wks-installer.php','public/manifest.webmanifest','public/service-worker.js',
     'storage/uploads/.gitkeep','storage/logs/.gitkeep','CHANGELOG.json','VERSION','.env.example'
 ] as $required){
     if(!is_file(BASE_PATH.'/'.$required))$errors[]='Required file missing: '.$required;

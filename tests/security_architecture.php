@@ -50,6 +50,12 @@ $mustContain('app/Services/UploadService.php',[
     'random_bytes(',
     "/storage/uploads/",
 ]);
+$mustContain('public/wks-installer.php',[
+    "WKS_ARCHIVE_URL='https://github.com/julian-obermeier/WKS/archive/refs/heads/main.zip'",
+    'hash_equals($csrf,$provided)',
+    'wks_safe_relative(',
+    '@unlink(__FILE__)',
+]);
 $mustContain('public/service-worker.js',[
     "if(req.method!=='GET')return",
     "fetch(req,{cache:'no-store'})",
@@ -64,14 +70,14 @@ $mustContain('database/migrations/2026_09_23_000002_seed_core_data.php',[
 
 $routes=$read('routes/web.php');
 preg_match_all('/\$router->(get|post)\(\'([^\']+)\',\s*\[[^\]]+\](?:,\s*(\[[^;]+\]))?\);/',$routes,$matches,PREG_SET_ORDER);
-$publicPrefixes=['/install','/login'];
+$publicPrefixes=['/install','/install/configure','/login'];
 $locationExempt=['/logout','/password/change','/location/select','/profile/theme'];
 foreach($matches as $route){
     $method=strtoupper($route[1]);$path=$route[2];$middleware=$route[3]??'';
     $isPublic=false;foreach($publicPrefixes as $prefix)if($path===$prefix){$isPublic=true;break;}
     if(!$isPublic&&!str_contains($middleware,"'auth'"))$errors[]="Protected route missing auth middleware: {$method} {$path}";
     if(!$isPublic&&!in_array($path,$locationExempt,true)&&!str_contains($middleware,"'location'"))$errors[]="Protected domain route missing location middleware: {$method} {$path}";
-    if($method==='POST'&&$path!=='/install'&&$path!=='/login'&&!str_contains($middleware,"'auth'"))$errors[]="State-changing route missing auth middleware: {$method} {$path}";
+    if($method==='POST'&&!in_array($path,['/install','/install/configure','/login'],true)&&!str_contains($middleware,"'auth'"))$errors[]="State-changing route missing auth middleware: {$method} {$path}";
 }
 
 $sensitivePrefixes=[
