@@ -25,6 +25,7 @@ use WKS\Controllers\Admin\SystemController;
 use WKS\Controllers\Admin\ErrorLogController;
 use WKS\Controllers\Admin\CronController;
 use WKS\Controllers\Admin\MailController;
+use WKS\Controllers\Admin\NotificationRuleController;
 use WKS\Controllers\Admin\TemplateController;
 use WKS\Controllers\Admin\UpdateController;
 use WKS\Controllers\ReleaseNotesController;
@@ -74,6 +75,7 @@ $router->get('/admin/locations/{id}/edit', [LocationController::class, 'edit'], 
 $router->post('/admin/locations/{id}', [LocationController::class, 'update'], ['auth', 'password', 'location', 'permission:system.locations.manage']);
 
 $router->get('/admin/audit', [AuditController::class, 'index'], ['auth', 'password', 'location', 'permission:system.audit.view']);
+$router->get('/admin/audit/export.csv', [AuditController::class, 'exportCsv'], ['auth','password','location','permission:system.audit.export']);
 
 $router->get('/admin/settings/security', [SettingsController::class, 'security'], ['auth', 'password', 'location', 'permission:system.settings.manage']);
 $router->post('/admin/settings/security', [SettingsController::class, 'updateSecurity'], ['auth', 'password', 'location', 'permission:system.settings.manage']);
@@ -222,3 +224,7 @@ $router->post('/whats-new/{version}/seen', [ReleaseNotesController::class, 'seen
 
 $router->post('/autosave', [AutosaveController::class, 'store'], ['auth','password','location']);
 $router->post('/autosave/discard', [AutosaveController::class, 'discard'], ['auth','password','location']);
+
+
+$router->get('/admin/notifications', [NotificationRuleController::class, 'index'], ['auth','password','location','permission:notifications.manage']);
+$router->post('/admin/notifications/rule', [NotificationRuleController::class, 'save'], ['auth','password','location','permission:notifications.manage']);

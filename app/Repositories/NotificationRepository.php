@@ -89,4 +89,49 @@ final class NotificationRepository
         return (bool)$stmt->fetchColumn();
     }
 
+
+    public function rules(): array
+    {
+        return Database::connection()->query(
+            'SELECT r.*,l.name AS location_name FROM notification_rules r
+             LEFT JOIN locations l ON l.id=r.location_id
+             ORDER BY r.event_code,r.role_code,l.name,r.id'
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function rule(int $id): ?array
+    {
+        $stmt=Database::connection()->prepare('SELECT * FROM notification_rules WHERE id=:id LIMIT 1');
+        $stmt->execute(['id'=>$id]);return $stmt->fetch(PDO::FETCH_ASSOC)?:null;
+    }
+
+    public function saveRule(?int $id,array $data): int
+    {
+        if($id===null){
+            $check=Database::connection()->prepare(
+                'SELECT id FROM notification_rules
+                 WHERE event_code=:event_code AND ((role_code IS NULL AND :role_code_null=1) OR role_code=:role_code)
+                   AND ((location_id IS NULL AND :location_null=1) OR location_id=:location_id)
+                 LIMIT 1'
+            );
+            $check->execute([
+                'event_code'=>$data['event_code'],'role_code_null'=>$data['role_code']===null?1:0,'role_code'=>$data['role_code'],
+                'location_null'=>$data['location_id']===null?1:0,'location_id'=>$data['location_id']
+            ]);
+            $existing=(int)$check->fetchColumn();if($existing>0)$id=$existing;
+        }
+        if($id===null){
+            $stmt=Database::connection()->prepare(
+                'INSERT INTO notification_rules (event_code,role_code,location_id,internal_enabled,email_enabled,active,created_at,updated_at)
+                 VALUES (:event_code,:role_code,:location_id,:internal_enabled,:email_enabled,:active,NOW(),NOW())'
+            );
+            $stmt->execute($data);return (int)Database::connection()->lastInsertId();
+        }
+        Database::connection()->prepare(
+            'UPDATE notification_rules SET event_code=:event_code,role_code=:role_code,location_id=:location_id,
+             internal_enabled=:internal_enabled,email_enabled=:email_enabled,active=:active,updated_at=NOW() WHERE id=:id'
+        )->execute($data+['id'=>$id]);
+        return $id;
+    }
+
 }

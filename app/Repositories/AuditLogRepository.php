@@ -11,6 +11,7 @@ final class AuditLogRepository
     public function paginate(array $filters, int $page = 1, int $perPage = 50): array
     {
         $page = max(1, $page);
+        $perPage=max(1,min(10000,$perPage));
         $offset = ($page - 1) * $perPage;
         $where = ['1=1'];
         $params = [];
