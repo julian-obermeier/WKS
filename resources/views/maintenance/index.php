@@ -1,0 +1,2 @@
+<?php $title='Wartungsmodus'; ?>
+<section class="error-page"><div class="error-code">⚙</div><h1>WKS befindet sich im Wartungsmodus</h1><p>Die Anwendung wird derzeit administriert. Normale Benutzer können währenddessen nicht weiterarbeiten. Ihre bereits gespeicherten Daten bleiben erhalten.</p><form method="post" action="<?= e(url('logout')) ?>"><?= csrf_field() ?><button class="button ghost" type="submit">Abmelden</button></form></section>
