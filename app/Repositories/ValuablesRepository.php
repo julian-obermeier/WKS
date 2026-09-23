@@ -245,10 +245,29 @@ final class ValuablesRepository
             $params['storage_location_id']=(int)$filters['storage_location_id'];
         }
         $stmt=Database::connection()->prepare(
-            'SELECT r.*,(SELECT COUNT(*) FROM valuables_containers vc WHERE vc.valuables_record_id=r.id) AS container_count
+            'SELECT r.*,TIMESTAMPDIFF(DAY,r.stored_at,NOW()) AS storage_days,
+                    (SELECT COUNT(*) FROM valuables_containers vc WHERE vc.valuables_record_id=r.id) AS container_count
              FROM valuables_records r WHERE '.implode(' AND ',$where).' ORDER BY r.stored_at,r.custody_number'
         );
         $stmt->execute($params);return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function storageOccupancy(int $locationId): array
+    {
+        $stmt=Database::connection()->prepare(
+            'SELECT sl.id,sl.location_type,sl.location_number,sl.label,sl.sort_order,
+                    COUNT(DISTINCT CASE WHEN r.id IS NOT NULL THEN r.id END) AS record_count,
+                    SUM(CASE WHEN r.id IS NOT NULL THEN 1 ELSE 0 END) AS container_count
+             FROM storage_locations sl
+             LEFT JOIN valuables_containers vc ON vc.storage_location_id=sl.id
+             LEFT JOIN valuables_records r ON r.id=vc.valuables_record_id
+                  AND r.location_id=sl.location_id AND r.status="stored" AND r.deleted_at IS NULL
+             WHERE sl.location_id=:location_id AND sl.active=1
+             GROUP BY sl.id,sl.location_type,sl.location_number,sl.label,sl.sort_order
+             ORDER BY sl.sort_order,sl.label'
+        );
+        $stmt->execute(['location_id'=>$locationId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function longTerm(int $locationId,int $days): array

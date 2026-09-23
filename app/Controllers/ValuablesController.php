@@ -21,7 +21,8 @@ final class ValuablesController
         $locationId=(int)active_location_id();$repo=new ValuablesRepository();$service=new ValuablesService();
         $filters=['container_type'=>(string)$request->query('container_type',''),'storage_location_id'=>(int)$request->query('storage_location_id',0)];
         $records=$repo->active($locationId,$filters);$counts=$repo->counts($locationId,$service->longTermDays());$storage=$repo->storageLocations($locationId);
-        return View::render('valuables/index',compact('records','counts','filters','storage','service'));
+        $occupancy=$repo->storageOccupancy($locationId);
+        return View::render('valuables/index',compact('records','counts','filters','storage','occupancy','service'));
     }
 
     public function create(Request $request): Response
