@@ -114,6 +114,7 @@ $router->post('/admin/dutybook/place', [DutybookConfigController::class, 'savePl
 $router->post('/admin/dutybook/measure', [DutybookConfigController::class, 'saveMeasure'], ['auth','password','location','permission:system.masterdata.manage']);
 $router->post('/admin/dutybook/person-role', [DutybookConfigController::class, 'savePersonRole'], ['auth','password','location','permission:system.masterdata.manage']);
 $router->post('/admin/dutybook/external', [DutybookConfigController::class, 'saveExternal'], ['auth','password','location','permission:system.masterdata.manage']);
+$router->post('/admin/dutybook/automatic-rule', [DutybookConfigController::class, 'saveAutomaticRule'], ['auth','password','location','permission:system.masterdata.manage']);
 
 
 $router->get('/special-reports', [SpecialReportController::class, 'index'], ['auth','password','location','permission:special_reports.read']);

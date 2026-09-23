@@ -10,6 +10,7 @@ use WKS\Core\Auth;
 use WKS\Core\Database;
 use WKS\Core\HttpException;
 use WKS\Repositories\DutybookRepository;
+use WKS\Repositories\DutybookAutomaticRuleRepository;
 use WKS\Repositories\MasterDataRepository;
 
 final class ShiftService
@@ -140,6 +141,7 @@ final class ShiftService
 
     private function createAutomaticEntry(int $locationId,int $dayId,string $dutyDate,int $sessionId,int $shiftId,string $type,string $facts,int $userId): void
     {
+        if(!(new DutybookAutomaticRuleRepository())->enabled($locationId,$type))return;
         $stmt=Database::connection()->prepare(
             'SELECT COUNT(*) FROM dutybook_entries
              WHERE location_id=:location_id AND shift_session_id=:session_id AND automatic_type=:type AND deleted_at IS NULL'

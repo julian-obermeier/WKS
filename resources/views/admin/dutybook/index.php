@@ -2,6 +2,22 @@
 <div class="page-header"><div><p class="eyebrow">Administration · Dienstbuch</p><h1>Stammdaten & Formulare</h1><p>Schichten, Ereignisarten, Zusatzfelder, Orte, Maßnahmen, Personenrollen und externe Stellen.</p></div></div>
 <div class="notice info">Änderungen an Stammdaten werden protokolliert. Bestehende Dienstbucheinträge behalten ihre gespeicherten Werte und Verknüpfungen.</div>
 
+
+<div class="panel config-section">
+    <div class="panel-header"><div><h2>Automatische Dienstbucheinträge</h2><p>Standortbezogene Systemereignisse können einzeln ein- oder ausgeschaltet werden.</p></div></div>
+    <div class="notice info">Bei einem direkt erstellten Sonderbericht ohne bestehenden Dienstbucheintrag wird die fachlich notwendige Dienstbuchverknüpfung trotzdem erzeugt. Der Schalter „Sonderbericht erstellt“ steuert nur den zusätzlichen automatischen Eintrag, wenn bereits ein Dienstbucheintrag als Quelle existiert.</div>
+    <?php foreach($automaticRules as $rule): ?>
+        <form method="post" action="<?= e(url('admin/dutybook/automatic-rule')) ?>" class="compact-form">
+            <?= csrf_field() ?>
+            <input type="hidden" name="event_code" value="<?= e($rule['event_code']) ?>">
+            <div><strong><?= e($rule['label']) ?></strong><small class="table-sub"><?= e($rule['event_code']) ?></small></div>
+            <label class="check-row"><input type="checkbox" name="enabled" value="1" <?= $rule['enabled']?'checked':'' ?>><span>Automatischen Eintrag erzeugen</span></label>
+            <button class="button secondary" type="submit">Speichern</button>
+        </form>
+    <?php endforeach; ?>
+</div>
+
+
 <div class="panel config-section"><h2>Schichten</h2><?php foreach($shifts as $x):?><form method="post" action="<?= e(url('admin/dutybook/shift')) ?>" class="compact-form"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$x['id'] ?>"><label>Kürzel<input name="code" value="<?= e($x['code']) ?>" required></label><label>Name<input name="name" value="<?= e($x['name']) ?>" required></label><label>Beginn<input type="time" name="start_time" value="<?= e(substr($x['start_time'],0,5)) ?>" required></label><label>Ende<input type="time" name="end_time" value="<?= e(substr($x['end_time'],0,5)) ?>" required></label><label>Sortierung<input type="number" name="sort_order" value="<?= (int)$x['sort_order'] ?>"></label><label class="check-row"><input type="checkbox" name="crosses_midnight" value="1" <?= $x['crosses_midnight']?'checked':'' ?>><span>über Mitternacht</span></label><label class="check-row"><input type="checkbox" name="active" value="1" <?= $x['active']?'checked':'' ?>><span>Aktiv</span></label><button class="button secondary" type="submit">Speichern</button></form><?php endforeach;?>
 <form method="post" action="<?= e(url('admin/dutybook/shift')) ?>" class="compact-form"><?= csrf_field() ?><label>Kürzel<input name="code" required></label><label>Name<input name="name" required></label><label>Beginn<input type="time" name="start_time" required></label><label>Ende<input type="time" name="end_time" required></label><label>Sortierung<input type="number" name="sort_order" value="50"></label><label class="check-row"><input type="checkbox" name="crosses_midnight" value="1"><span>über Mitternacht</span></label><label class="check-row"><input type="checkbox" name="active" value="1" checked><span>Aktiv</span></label><button class="button primary" type="submit">+ Schicht</button></form></div>
 

@@ -7,6 +7,7 @@ use WKS\Core\Auth;
 use WKS\Core\Database;
 use WKS\Core\HttpException;
 use WKS\Repositories\DutybookRepository;
+use WKS\Repositories\DutybookAutomaticRuleRepository;
 use WKS\Repositories\MasterDataRepository;
 
 final class HandoverService
@@ -102,14 +103,16 @@ final class HandoverService
                  SET e.status="open",e.updated_at=NOW() WHERE he.handover_id=:handover_id AND e.status="handover"'
             )->execute(['handover_id'=>$handover['id']]);
 
-            (new DutybookRepository())->createEntry([
-                'location_id'=>$locationId,'dutybook_day_id'=>$current['dutybook_day_id'],'duty_date'=>$current['duty_date'],
-                'shift_session_id'=>$current['id'],'shift_id'=>$current['shift_id'],'category_id'=>null,'event_type_id'=>null,
-                'status'=>'done','occurred_at'=>date('Y-m-d H:i:s'),'event_started_at'=>null,'event_ended_at'=>null,'place_id'=>null,
-                'place_free_text'=>null,'facts'=>'Schichtübergabe übernommen','measures_text'=>null,'result_text'=>null,
-                'is_automatic'=>1,'automatic_type'=>'shift_handover','edit_locked_at'=>date('Y-m-d H:i:s'),
-                'created_by'=>Auth::id(),'updated_by'=>Auth::id()
-            ]);
+            if((new DutybookAutomaticRuleRepository())->enabled($locationId,'shift_handover')){
+                (new DutybookRepository())->createEntry([
+                    'location_id'=>$locationId,'dutybook_day_id'=>$current['dutybook_day_id'],'duty_date'=>$current['duty_date'],
+                    'shift_session_id'=>$current['id'],'shift_id'=>$current['shift_id'],'category_id'=>null,'event_type_id'=>null,
+                    'status'=>'done','occurred_at'=>date('Y-m-d H:i:s'),'event_started_at'=>null,'event_ended_at'=>null,'place_id'=>null,
+                    'place_free_text'=>null,'facts'=>'Schichtübergabe übernommen','measures_text'=>null,'result_text'=>null,
+                    'is_automatic'=>1,'automatic_type'=>'shift_handover','edit_locked_at'=>date('Y-m-d H:i:s'),
+                    'created_by'=>Auth::id(),'updated_by'=>Auth::id()
+                ]);
+            }
             $pdo->commit();
             (new AuditService())->log('handover_completed','dutybook',(string)$handover['id'],null,['incoming_session_id'=>$current['id']],[],null,Auth::id(),$locationId);
         }catch(\Throwable $e){$pdo->rollBack();throw $e;}

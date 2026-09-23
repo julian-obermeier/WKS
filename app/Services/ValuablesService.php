@@ -9,6 +9,7 @@ use WKS\Core\Auth;
 use WKS\Core\Database;
 use WKS\Core\HttpException;
 use WKS\Repositories\DutybookRepository;
+use WKS\Repositories\DutybookAutomaticRuleRepository;
 use WKS\Repositories\SettingsRepository;
 use WKS\Repositories\ValuablesRepository;
 
@@ -213,6 +214,8 @@ final class ValuablesService
 
     private function autoDutybook(int $locationId,int $recordId,int $custodyNumber,string $type,string $occurredAt,array $person): void
     {
+        $eventCode=$type==='stored'?'valuables_stored':'valuables_released';
+        if(!(new DutybookAutomaticRuleRepository())->enabled($locationId,$eventCode))return;
         $repo=new DutybookRepository();$session=$repo->currentOpenSessionForUser($locationId,(int)Auth::id());
         if($session){
             $dayId=(int)$session['dutybook_day_id'];$dutyDate=(string)$session['duty_date'];$sessionId=(int)$session['id'];$shiftId=(int)$session['shift_id'];

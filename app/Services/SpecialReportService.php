@@ -10,6 +10,7 @@ use WKS\Core\Authorization;
 use WKS\Core\Database;
 use WKS\Core\HttpException;
 use WKS\Repositories\DutybookRepository;
+use WKS\Repositories\DutybookAutomaticRuleRepository;
 use WKS\Repositories\MasterDataRepository;
 use WKS\Repositories\SettingsRepository;
 use WKS\Repositories\SpecialReportRepository;
@@ -284,6 +285,7 @@ final class SpecialReportService
     private function createDutybookLink(int $locationId,int $reportId,int $sourceId,string $typeName,int $year,int $number,string $occurredAt): int
     {
         $dutyRepo=new DutybookRepository();$source=$sourceId>0?$dutyRepo->findEntry($sourceId,$locationId):null;
+        if($source && !(new DutybookAutomaticRuleRepository())->enabled($locationId,'special_report_created'))return $sourceId;
         if($source){$dayId=(int)$source['dutybook_day_id'];$dutyDate=$source['duty_date'];$sessionId=$source['shift_session_id'];$shiftId=$source['shift_id'];}
         else{
             $session=$dutyRepo->currentOpenSessionForUser($locationId,(int)Auth::id());

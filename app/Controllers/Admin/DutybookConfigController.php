@@ -9,6 +9,7 @@ use WKS\Core\Request;
 use WKS\Core\Response;
 use WKS\Core\View;
 use WKS\Repositories\MasterDataRepository;
+use WKS\Repositories\DutybookAutomaticRuleRepository;
 use WKS\Services\AuditService;
 
 final class DutybookConfigController
@@ -20,7 +21,8 @@ final class DutybookConfigController
             'shifts'=>$repo->shifts($locationId,false),'categories'=>$repo->categories($locationId,false),
             'eventTypes'=>$repo->eventTypes($locationId,false),'dynamicFields'=>$repo->allDutybookDynamicFields($locationId),
             'places'=>$repo->places($locationId,false),'measures'=>$repo->measures($locationId,false),
-            'personRoles'=>$repo->personRoles($locationId),'externalOrganizations'=>$repo->externalOrganizations($locationId)
+            'personRoles'=>$repo->personRoles($locationId),'externalOrganizations'=>$repo->externalOrganizations($locationId),
+            'automaticRules'=>(new DutybookAutomaticRuleRepository())->all($locationId)
         ]);
     }
 
@@ -101,6 +103,20 @@ final class DutybookConfigController
         if($data['name']==='')throw new HttpException(422,'Personenrolle ist erforderlich.');
         $saved=(new MasterDataRepository())->savePersonRole($id,(int)active_location_id(),$data);
         $this->audit('person_role_saved',$saved,$data,$request);return $this->back('Personenrolle wurde gespeichert.');
+    }
+
+    public function saveAutomaticRule(Request $request): Response
+    {
+        $eventCode=trim((string)$request->post('event_code',''));
+        $enabled=(bool)$request->post('enabled');
+        $repo=new DutybookAutomaticRuleRepository();
+        if(!array_key_exists($eventCode,$repo->events()))throw new HttpException(422,'Unbekannter Typ für automatische Dienstbucheinträge.');
+        $repo->save((int)active_location_id(),$eventCode,$enabled,(int)Auth::id());
+        (new AuditService())->log(
+            'dutybook_automatic_rule_saved','masterdata',$eventCode,null,
+            ['enabled'=>$enabled],['event_code'=>$eventCode],$request
+        );
+        return $this->back('Regel für automatische Dienstbucheinträge wurde gespeichert.');
     }
 
     public function saveExternal(Request $request): Response
