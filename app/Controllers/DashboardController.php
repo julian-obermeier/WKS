@@ -8,6 +8,7 @@ use WKS\Core\Request;
 use WKS\Core\Response;
 use WKS\Core\View;
 use WKS\Repositories\LocationRepository;
+use WKS\Services\DashboardService;
 
 final class DashboardController
 {
@@ -16,6 +17,7 @@ final class DashboardController
         $user = Auth::user();
         $location = active_location_id() ? (new LocationRepository())->find((int) active_location_id()) : null;
 
-        return View::render('dashboard/index', compact('user', 'location'));
+        $dashboard = (new DashboardService())->data((int) $user['id'], (int) active_location_id(), (string) $user['role_code']);
+        return View::render('dashboard/index', compact('user', 'location', 'dashboard'));
     }
 }

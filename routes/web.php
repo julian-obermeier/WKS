@@ -14,6 +14,9 @@ use WKS\Controllers\DashboardController;
 use WKS\Controllers\DutybookController;
 use WKS\Controllers\HandoverController;
 use WKS\Controllers\HouseBanController;
+use WKS\Controllers\GlobalSearchController;
+use WKS\Controllers\StatisticsController;
+use WKS\Controllers\HelpController;
 use WKS\Controllers\AnnouncementController;
 use WKS\Controllers\NotificationController;
 use WKS\Controllers\Admin\TrashController;
@@ -171,3 +174,8 @@ $router->post('/announcements/{id}/confirm', [AnnouncementController::class, 'co
 $router->get('/notifications', [NotificationController::class, 'index'], ['auth','password','location','permission:notifications.read']);
 $router->post('/notifications/{id}/read', [NotificationController::class, 'read'], ['auth','password','location','permission:notifications.read']);
 $router->post('/notifications/read-all', [NotificationController::class, 'readAll'], ['auth','password','location','permission:notifications.read']);
+
+
+$router->get('/search', [GlobalSearchController::class, 'index'], ['auth','password','location','permission:search.use']);
+$router->get('/statistics', [StatisticsController::class, 'index'], ['auth','password','location','permission:statistics.view']);
+$router->get('/help', [HelpController::class, 'index'], ['auth','password','location']);
