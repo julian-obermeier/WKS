@@ -41,11 +41,12 @@ final class SpecialReportService
                 'edit_locked_at'=>(new DateTimeImmutable())->modify('+'.max(0,$editMinutes).' minutes')->format('Y-m-d H:i:s'),
                 'created_by'=>$userId,'updated_by'=>$userId
             ]);
-            $this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled']);
+            $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled']);
             $pdo->commit();
 
             if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments']);
-            $dutybookId=$this->createDutybookLink($locationId,$id,$sourceId,$type['name'],$core['incident_started_at']);
+            $this->storeWitnessAttachments($id,$witnessIds,$files['witness_attachments']??[]);
+            $dutybookId=$this->createDutybookLink($locationId,$id,$sourceId,$type['name'],$year,$number,$core['incident_started_at']);
             $this->link($sourceId>0?$sourceId:$dutybookId,'dutybook',$id,'special_report','special_report',(int)Auth::id());
             (new AuditService())->log('special_report_created','special_reports',(string)$id,null,['year'=>$year,'number'=>$number,'type'=>$type['name'],'status'=>$status],[] ,null,$userId,$locationId);
             return $id;
@@ -72,9 +73,10 @@ final class SpecialReportService
                 'incident_ended_at'=>$core['incident_ended_at'],'place_id'=>$core['place_id'],'place_free_text'=>$core['place_free_text'],
                 'facts'=>$core['facts'],'measures_text'=>$core['measures_text'],'result_text'=>$core['result_text'],'status'=>$status,'updated_by'=>Auth::id()
             ]);
-            $this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled']);
+            $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled']);
             $pdo->commit();
             if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments']);
+            $this->storeWitnessAttachments($id,$witnessIds,$files['witness_attachments']??[]);
             $after=$repo->find($id,$locationId);
             (new AuditService())->log('special_report_updated','special_reports',(string)$id,$before,$after?$this->snapshot($after):null,[],null,Auth::id(),$locationId);
         }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
@@ -201,8 +203,14 @@ final class SpecialReportService
     public function filename(array $r,string $extension): string
     {
         $person=$r['people'][0]??null;
-        $name=$person?trim(($person['last_name']??'').'_'.$person['first_name']??''):'Ohne_Person';
-        $name=$this->filePart($name?:'Ohne_Person');$type=$this->filePart((string)$r['report_type_name']);
+        $name='Ohne_Person';
+        if(is_array($person)){
+            $last=(string)($person['last_name']??'');
+            $first=(string)($person['first_name']??'');
+            $candidate=trim($last.'_'.$first,'_ ');
+            if($candidate!=='')$name=$candidate;
+        }
+        $name=$this->filePart($name);$type=$this->filePart((string)$r['report_type_name']);
         return date('Y.m.d',strtotime((string)$r['incident_date'])).'_SB_'.str_pad((string)$r['report_number'],4,'0',STR_PAD_LEFT).'_'.$type.'_'.$name.'.'.$extension;
     }
 
@@ -230,10 +238,10 @@ final class SpecialReportService
         ];
     }
 
-    private function replaceRelations(SpecialReportRepository $repo,int $id,array $input,array $dynamic,bool $forceEnabled): void
+    private function replaceRelations(SpecialReportRepository $repo,int $id,array $input,array $dynamic,bool $forceEnabled): array
     {
         $repo->syncStaff($id,(array)($input['staff_ids']??[]));$repo->replacePeople($id,$this->people((array)($input['people']??[])));
-        $repo->replaceWitnesses($id,$this->witnesses((array)($input['witnesses']??[])));$repo->replaceExternal($id,$this->external((array)($input['external']??[])));
+        $witnessIds=$repo->replaceWitnesses($id,$this->witnesses((array)($input['witnesses']??[])));$repo->replaceExternal($id,$this->external((array)($input['external']??[])));
         $inj=(array)($input['injury']??[]);$repo->saveInjury($id,[
             'injury_present'=>!empty($inj['injury_present'])?1:0,'description'=>$this->nullable($inj['description']??null),
             'medical_care'=>$this->nullable($inj['medical_care']??null),'treating_entity'=>$this->nullable($inj['treating_entity']??null),
@@ -241,6 +249,7 @@ final class SpecialReportService
         ]);
         $repo->replaceForceActions($id,$forceEnabled?$this->forceActions((array)($input['force_actions']??[])):[]);
         $repo->saveDynamicValues($id,$dynamic);
+        return $witnessIds;
     }
 
     private function people(array $rows): array
@@ -272,7 +281,7 @@ final class SpecialReportService
         ];}return $out;
     }
 
-    private function createDutybookLink(int $locationId,int $reportId,int $sourceId,string $typeName,string $occurredAt): int
+    private function createDutybookLink(int $locationId,int $reportId,int $sourceId,string $typeName,int $year,int $number,string $occurredAt): int
     {
         $dutyRepo=new DutybookRepository();$source=$sourceId>0?$dutyRepo->findEntry($sourceId,$locationId):null;
         if($source){$dayId=(int)$source['dutybook_day_id'];$dutyDate=$source['duty_date'];$sessionId=$source['shift_session_id'];$shiftId=$source['shift_id'];}
@@ -287,7 +296,7 @@ final class SpecialReportService
         return $dutyRepo->createEntry([
             'location_id'=>$locationId,'dutybook_day_id'=>$dayId,'duty_date'=>$dutyDate,'shift_session_id'=>$sessionId,'shift_id'=>$shiftId,
             'category_id'=>null,'event_type_id'=>null,'status'=>'done','occurred_at'=>$occurredAt,'event_started_at'=>null,'event_ended_at'=>null,
-            'place_id'=>null,'place_free_text'=>null,'facts'=>'Sonderbericht erstellt: '.$typeName.' · SB '.str_pad((string)$reportId,4,'0',STR_PAD_LEFT),
+            'place_id'=>null,'place_free_text'=>null,'facts'=>'Sonderbericht erstellt: '.$typeName.' · SB '.str_pad((string)$number,4,'0',STR_PAD_LEFT).'/'.$year,
             'measures_text'=>null,'result_text'=>null,'is_automatic'=>1,'automatic_type'=>'special_report_created','edit_locked_at'=>date('Y-m-d H:i:s'),
             'created_by'=>Auth::id(),'updated_by'=>Auth::id()
         ]);
@@ -320,4 +329,24 @@ final class SpecialReportService
     private function nullable(mixed $v): ?string{$v=trim((string)($v??''));return $v===''?null:$v;}
     private function dateTime(string $v,bool $required=false): ?string{$v=trim($v);if($v===''){if($required)throw new HttpException(422,'Datum/Uhrzeit fehlt.');return null;}$v=str_replace('T',' ',$v);$d=DateTimeImmutable::createFromFormat('Y-m-d H:i',$v)?:DateTimeImmutable::createFromFormat('Y-m-d H:i:s',$v);if(!$d)throw new HttpException(422,'Ungültiges Datum/Uhrzeit.');return $d->format('Y-m-d H:i:s');}
     private function filePart(string $v): string{$v=trim($v);$v=preg_replace('/[\\\\\/:*?"<>|]+/u','_',$v)??$v;$v=preg_replace('/\s+/u','_',$v)??$v;return trim($v,'_.')?:'Unbenannt';}
+
+    private function storeWitnessAttachments(int $reportId,array $witnessIds,array $files): void
+    {
+        if(!isset($files['name']))return;
+        $uploader=new UploadService();
+        foreach($witnessIds as $index=>$witnessId){
+            if(!isset($files['name'][$index]))continue;
+            $file=[
+                'name'=>$files['name'][$index]??'','type'=>$files['type'][$index]??'',
+                'tmp_name'=>$files['tmp_name'][$index]??'','error'=>$files['error'][$index]??UPLOAD_ERR_NO_FILE,
+                'size'=>$files['size'][$index]??0
+            ];
+            if($file['error']===UPLOAD_ERR_NO_FILE)continue;
+            $attachmentId=$uploader->store('special_report',$reportId,$file);
+            \WKS\Core\Database::connection()->prepare(
+                'UPDATE special_report_witnesses SET attachment_id=:attachment_id WHERE id=:id AND report_id=:report_id'
+            )->execute(['attachment_id'=>$attachmentId,'id'=>$witnessId,'report_id'=>$reportId]);
+        }
+    }
+
 }

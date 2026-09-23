@@ -125,14 +125,16 @@ final class SpecialReportRepository
         foreach($rows as $x)$stmt->execute($x+['report_id'=>$reportId]);
     }
 
-    public function replaceWitnesses(int $reportId,array $rows): void
+    public function replaceWitnesses(int $reportId,array $rows): array
     {
         $pdo=Database::connection();$pdo->prepare('DELETE FROM special_report_witnesses WHERE report_id=:id')->execute(['id'=>$reportId]);
         $stmt=$pdo->prepare(
             'INSERT INTO special_report_witnesses (report_id,name,contact_details,statement_summary,written_statement,created_at)
              VALUES (:report_id,:name,:contact_details,:statement_summary,:written_statement,NOW())'
         );
-        foreach($rows as $x)$stmt->execute($x+['report_id'=>$reportId]);
+        $ids=[];
+        foreach($rows as $x){$stmt->execute($x+['report_id'=>$reportId]);$ids[]=(int)$pdo->lastInsertId();}
+        return $ids;
     }
 
     public function replaceExternal(int $reportId,array $rows): void
