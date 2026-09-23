@@ -189,6 +189,9 @@ final class DutybookController
             flash('error','Für diesen Tag existiert noch kein Tagesdienstbuch.');
             return Response::redirect(url('dutybook?date='.$date));
         }
+        if($repo->hasOpenSessionsForDay($locationId,$date)){
+            throw new HttpException(422,'Der PDF-Archivstand kann erst erzeugt werden, wenn alle Schichten dieses Dienstbuchtags beendet wurden.');
+        }
         $entries=$repo->entriesForDay($locationId,$date);$rows=[];
         foreach($entries as $e){
             $rows[]=date('H:i',strtotime((string)$e['occurred_at'])).' · '.($e['shift_name']??'–').' · '.($e['event_type_name']??'Automatisch').' · '.$e['facts']

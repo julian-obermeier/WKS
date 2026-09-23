@@ -409,4 +409,15 @@ final class DutybookRepository
         return $stmt->fetch(PDO::FETCH_ASSOC)?:null;
     }
 
+
+    public function hasOpenSessionsForDay(int $locationId,string $dutyDate): bool
+    {
+        $stmt=Database::connection()->prepare(
+            'SELECT COUNT(*) FROM shift_sessions
+             WHERE location_id=:location_id AND duty_date=:duty_date AND status="open"'
+        );
+        $stmt->execute(['location_id'=>$locationId,'duty_date'=>$dutyDate]);
+        return (bool)$stmt->fetchColumn();
+    }
+
 }
