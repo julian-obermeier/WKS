@@ -8,16 +8,19 @@ use WKS\Core\Database;
 
 final class StatisticsRepository
 {
-    public function summary(int $locationId,string $from,string $to): array
+    public function summary(int $locationId,string $from,string $to,?int $eventTypeId=null,?int $reportTypeId=null): array
     {
         $pdo=Database::connection();$params=['location_id'=>$locationId,'from'=>$from,'to'=>$to];
-        $scalar=static function(string $sql) use($pdo,$params): float {
-            $s=$pdo->prepare($sql);$s->execute($params);return (float)$s->fetchColumn();
+        $dutyFilter=$eventTypeId?' AND event_type_id=:event_type_id':'';$reportFilter=$reportTypeId?' AND report_type_id=:report_type_id':'';
+        if($eventTypeId)$params['event_type_id']=$eventTypeId;if($reportTypeId)$params['report_type_id']=$reportTypeId;
+        $scalar=static function(string $sql,array $needed=[]) use($pdo,$params): float {
+            $bound=[];foreach($params as $key=>$value)if(str_contains($sql,':'.$key))$bound[$key]=$value;
+            $s=$pdo->prepare($sql);$s->execute($bound);return (float)$s->fetchColumn();
         };
         return [
-            'dutybook'=>(int)$scalar('SELECT COUNT(*) FROM dutybook_entries WHERE location_id=:location_id AND deleted_at IS NULL AND duty_date BETWEEN :from AND :to'),
-            'special_reports'=>(int)$scalar('SELECT COUNT(*) FROM special_reports WHERE location_id=:location_id AND deleted_at IS NULL AND incident_date BETWEEN :from AND :to'),
-            'unreviewed'=>(int)$scalar('SELECT COUNT(*) FROM special_reports WHERE location_id=:location_id AND deleted_at IS NULL AND status="completed" AND incident_date BETWEEN :from AND :to'),
+            'dutybook'=>(int)$scalar('SELECT COUNT(*) FROM dutybook_entries WHERE location_id=:location_id AND deleted_at IS NULL AND duty_date BETWEEN :from AND :to'.$dutyFilter),
+            'special_reports'=>(int)$scalar('SELECT COUNT(*) FROM special_reports WHERE location_id=:location_id AND deleted_at IS NULL AND incident_date BETWEEN :from AND :to'.$reportFilter),
+            'unreviewed'=>(int)$scalar('SELECT COUNT(*) FROM special_reports WHERE location_id=:location_id AND deleted_at IS NULL AND status="completed" AND incident_date BETWEEN :from AND :to'.$reportFilter),
             'valuables_stored'=>(int)$scalar('SELECT COUNT(*) FROM valuables_records WHERE location_id=:location_id AND deleted_at IS NULL AND DATE(stored_at) BETWEEN :from AND :to'),
             'valuables_released'=>(int)$scalar('SELECT COUNT(*) FROM valuables_records WHERE location_id=:location_id AND deleted_at IS NULL AND released_at IS NOT NULL AND DATE(released_at) BETWEEN :from AND :to'),
             'house_bans'=>(int)$scalar('SELECT COUNT(*) FROM house_bans WHERE location_id=:location_id AND deleted_at IS NULL AND ban_date BETWEEN :from AND :to'),
@@ -25,26 +28,30 @@ final class StatisticsRepository
         ];
     }
 
-    public function dutybookByEvent(int $locationId,string $from,string $to): array
+    public function dutybookByEvent(int $locationId,string $from,string $to,?int $eventTypeId=null): array
     {
+        $filter=$eventTypeId?' AND e.event_type_id=:event_type_id':'';
         $stmt=Database::connection()->prepare(
             'SELECT COALESCE(t.name,"Automatisch") AS label,COUNT(*) AS value,t.id AS event_type_id
              FROM dutybook_entries e LEFT JOIN dutybook_event_types t ON t.id=e.event_type_id
-             WHERE e.location_id=:location_id AND e.deleted_at IS NULL AND e.duty_date BETWEEN :from AND :to
+             WHERE e.location_id=:location_id AND e.deleted_at IS NULL AND e.duty_date BETWEEN :from AND :to'.$filter.'
              GROUP BY t.id,t.name ORDER BY value DESC,label LIMIT 15'
         );
-        $stmt->execute(['location_id'=>$locationId,'from'=>$from,'to'=>$to]);return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $params=['location_id'=>$locationId,'from'=>$from,'to'=>$to];if($eventTypeId)$params['event_type_id']=$eventTypeId;
+        $stmt->execute($params);return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function specialReportsByType(int $locationId,string $from,string $to): array
+    public function specialReportsByType(int $locationId,string $from,string $to,?int $reportTypeId=null): array
     {
+        $filter=$reportTypeId?' AND r.report_type_id=:report_type_id':'';
         $stmt=Database::connection()->prepare(
             'SELECT t.name AS label,COUNT(*) AS value,t.id AS type_id
              FROM special_reports r JOIN special_report_types t ON t.id=r.report_type_id
-             WHERE r.location_id=:location_id AND r.deleted_at IS NULL AND r.incident_date BETWEEN :from AND :to
+             WHERE r.location_id=:location_id AND r.deleted_at IS NULL AND r.incident_date BETWEEN :from AND :to'.$filter.'
              GROUP BY t.id,t.name ORDER BY value DESC,label LIMIT 15'
         );
-        $stmt->execute(['location_id'=>$locationId,'from'=>$from,'to'=>$to]);return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $params=['location_id'=>$locationId,'from'=>$from,'to'=>$to];if($reportTypeId)$params['report_type_id']=$reportTypeId;
+        $stmt->execute($params);return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function timeline(int $locationId,string $from,string $to): array
