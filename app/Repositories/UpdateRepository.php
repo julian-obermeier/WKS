@@ -58,31 +58,38 @@ final class UpdateRepository
 
     public function markSeen(int $userId,string $version): void
     {
-        Database::connection()->prepare(
-            'INSERT INTO user_release_views (user_id,version,seen_at) VALUES (:user_id,:version,NOW())
-             ON DUPLICATE KEY UPDATE seen_at=VALUES(seen_at)'
-        )->execute(['user_id'=>$userId,'version'=>$version]);
+        $pdo=Database::connection();$ownsTransaction=!$pdo->inTransaction();
+        if($ownsTransaction)$pdo->beginTransaction();
+        try{
+            $pdo->prepare(
+                'INSERT INTO user_release_views (user_id,version,seen_at) VALUES (:user_id,:version,NOW())
+                 ON DUPLICATE KEY UPDATE seen_at=VALUES(seen_at)'
+            )->execute(['user_id'=>$userId,'version'=>$version]);
+            $pdo->prepare(
+                'UPDATE users
+                 SET last_seen_release_version=:version,last_seen_release_at=NOW(),updated_at=NOW()
+                 WHERE id=:user_id'
+            )->execute(['version'=>$version,'user_id'=>$userId]);
+            if($ownsTransaction)$pdo->commit();
+        }catch(\Throwable $e){
+            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
+            throw $e;
+        }
     }
 
-    public function latestUnseen(int $userId): ?array
+    public function releaseIfUnseen(int $userId,string $version): ?array
     {
-        // Das automatische Modal darf ausschließlich die aktuellste Release-Version zeigen.
-        // Ältere, nie bestätigte Releases bleiben über "Was ist neu?" einsehbar, werden aber
-        // nach Bestätigung der aktuellen Version nicht nacheinander als Modal geöffnet.
         $stmt=Database::connection()->prepare(
             'SELECT r.*
              FROM release_notes r
-             WHERE NOT EXISTS (
-                 SELECT 1 FROM user_release_views v
-                 WHERE v.user_id=:user_id AND v.version=r.version
-             )
-             AND r.id=(
-                 SELECT latest.id FROM release_notes latest
-                 ORDER BY latest.build_date DESC,latest.id DESC LIMIT 1
-             )
+             JOIN users u ON u.id=:user_id
+             LEFT JOIN user_release_views v ON v.user_id=u.id AND v.version=r.version
+             WHERE r.version=:version
+               AND COALESCE(u.last_seen_release_version,"")<>r.version
+               AND v.user_id IS NULL
              LIMIT 1'
         );
-        $stmt->execute(['user_id'=>$userId]);
+        $stmt->execute(['user_id'=>$userId,'version'=>$version]);
         $row=$stmt->fetch(PDO::FETCH_ASSOC);
         if(!$row)return null;
         $row['sections']=json_decode((string)$row['changelog_json'],true)?:[];

@@ -17,7 +17,9 @@ final class ReleaseNotesService
 
     public function latestUnseen(int $userId): ?array
     {
-        $this->syncLocal();return (new UpdateRepository())->latestUnseen($userId);
+        $release=$this->syncLocal();
+        if(!$release)return null;
+        return (new UpdateRepository())->releaseIfUnseen($userId,(string)$release['version']);
     }
 
     public function all(): array

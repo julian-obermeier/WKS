@@ -18,6 +18,8 @@ final class ReleaseNotesController
 
     public function seen(Request $request,string $version): Response
     {
-        (new ReleaseNotesService())->markSeen((int)Auth::id(),$version);return Response::redirect(url());
+        (new ReleaseNotesService())->markSeen((int)Auth::id(),$version);
+        flash('success','Versionshinweise wurden als gelesen markiert.');
+        return Response::redirect(url());
     }
 }
