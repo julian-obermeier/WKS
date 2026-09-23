@@ -39,7 +39,7 @@ final class HouseBanService
     public function delete(int $locationId,int $id): void
     {
         $repo=new HouseBanRepository();$record=$repo->find($id,$locationId);if(!$record)throw new HttpException(404,'Hausverbot nicht gefunden.');
-        $repo->softDelete($id,$locationId,(int)Auth::id());
+        (new TrashService())->move('house_bans',$id,$locationId,(int)Auth::id());
         (new AuditService())->log('house_ban_deleted','house_bans',(string)$id,['ban_date'=>$record['ban_date'],'person_name'=>$record['person_name'],'reason'=>$record['reason']],['deleted'=>true],[],null,Auth::id(),$locationId);
     }
 

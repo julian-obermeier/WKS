@@ -14,6 +14,7 @@ use WKS\Controllers\DashboardController;
 use WKS\Controllers\DutybookController;
 use WKS\Controllers\HandoverController;
 use WKS\Controllers\HouseBanController;
+use WKS\Controllers\Admin\TrashController;
 use WKS\Controllers\InstallController;
 use WKS\Controllers\LocationSelectionController;
 use WKS\Controllers\ProfileController;
@@ -148,3 +149,9 @@ $router->post('/house-bans/{id}', [HouseBanController::class, 'update'], ['auth'
 $router->post('/house-bans/{id}/delete', [HouseBanController::class, 'delete'], ['auth','password','location','permission:house_bans.delete']);
 $router->get('/house-bans-export.csv', [HouseBanController::class, 'exportCsv'], ['auth','password','location','permission:house_bans.export']);
 $router->get('/house-bans-export.pdf', [HouseBanController::class, 'exportPdf'], ['auth','password','location','permission:house_bans.export']);
+
+
+$router->get('/admin/trash', [TrashController::class, 'index'], ['auth','password','location','permission:system.trash.manage']);
+$router->post('/admin/trash/{module}/{id}/move', [TrashController::class, 'move'], ['auth','password','location','permission:system.trash.manage']);
+$router->post('/admin/trash/{trashId}/restore', [TrashController::class, 'restore'], ['auth','password','location','permission:system.trash.manage']);
+$router->post('/admin/trash/{trashId}/delete', [TrashController::class, 'hardDelete'], ['auth','password','location','permission:system.trash.manage']);
