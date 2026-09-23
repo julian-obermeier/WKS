@@ -360,6 +360,10 @@ final class ValuablesRepository
                 $params[$key]=$v;
             }
         }
+        if(!empty($filters['container_type'])){
+            $where[]='EXISTS (SELECT 1 FROM valuables_containers vc_type_search WHERE vc_type_search.valuables_record_id=r.id AND vc_type_search.container_type=:container_type)';
+            $params['container_type']=(string)$filters['container_type'];
+        }
         if(!empty($filters['cassette_number'])){
             $where[]='EXISTS (SELECT 1 FROM valuables_containers vc JOIN cassettes c ON c.id=vc.cassette_id WHERE vc.valuables_record_id=r.id AND c.cassette_number=:cassette_number)';
             $params['cassette_number']=(int)$filters['cassette_number'];
