@@ -109,12 +109,12 @@ final class ValuablesRepository
         )->execute(['location_id'=>$locationId,'cassette_id'=>$cassetteId,'record_id'=>$recordId,'container_id'=>$containerId]);
     }
 
-    public function recordSeal(string $seal,int $recordId,int $containerId,string $side,int $userId,string $usedAt): void
+    public function recordSeal(string $seal,int $custodyNumber,int $recordId,int $containerId,string $side,int $userId,string $usedAt): void
     {
         Database::connection()->prepare(
-            'INSERT INTO seal_usages (seal_number,valuables_record_id,container_id,seal_side,used_at,created_by)
-             VALUES (:seal,:record_id,:container_id,:side,:used_at,:user_id)'
-        )->execute(['seal'=>$seal,'record_id'=>$recordId,'container_id'=>$containerId,'side'=>$side,'used_at'=>$usedAt,'user_id'=>$userId]);
+            'INSERT INTO seal_usages (seal_number,custody_number_snapshot,valuables_record_id,container_id,seal_side,used_at,created_by)
+             VALUES (:seal,:custody_number,:record_id,:container_id,:side,:used_at,:user_id)'
+        )->execute(['seal'=>$seal,'custody_number'=>$custodyNumber,'record_id'=>$recordId,'container_id'=>$containerId,'side'=>$side,'used_at'=>$usedAt,'user_id'=>$userId]);
     }
 
     public function find(int $id,int $locationId): ?array
