@@ -216,8 +216,13 @@
     };
     const drawChart = (canvas) => {
         const type = canvas.dataset.chart;
-        let labels = [], values = [];
-        try { labels = JSON.parse(canvas.dataset.labels || '[]'); values = JSON.parse(canvas.dataset.values || '[]'); } catch (_) { return; }
+        let labels = [], values = [], urls = [];
+        try {
+            labels = JSON.parse(canvas.dataset.labels || '[]');
+            values = JSON.parse(canvas.dataset.values || '[]');
+            urls = JSON.parse(canvas.dataset.urls || '[]');
+        } catch (_) { return; }
+
         const dpr = window.devicePixelRatio || 1;
         const width = Math.max(300, canvas.clientWidth || 600);
         const height = type === 'pie' ? 300 : 280;
@@ -225,24 +230,59 @@
         canvas.style.height = height + 'px';
         const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr);
         const colors = chartColors(); ctx.font = '12px system-ui'; ctx.fillStyle = colors.text; ctx.strokeStyle = colors.border;
+        const hitRegions = [];
         if (!values.length) { ctx.fillText('Keine Daten im gewählten Zeitraum.', 12, 30); return; }
+
         if (type === 'bar') {
-            const max = Math.max(...values,1), left=45, bottom=45, top=15, plotH=height-bottom-top, barW=Math.max(8,(width-left-20)/values.length*.62);
+            const max = Math.max(...values,1), left=45, bottom=45, top=15, plotH=height-bottom-top, slot=(width-left-20)/values.length, barW=Math.max(8,slot*.62);
             ctx.beginPath();ctx.moveTo(left,top);ctx.lineTo(left,height-bottom);ctx.lineTo(width-10,height-bottom);ctx.stroke();
-            values.forEach((v,i)=>{const x=left+12+i*((width-left-20)/values.length);const h=plotH*(v/max);ctx.fillStyle=colors.primary;ctx.fillRect(x,height-bottom-h,barW,h);ctx.fillStyle=colors.text;ctx.fillText(String(v),x,height-bottom-h-5);ctx.save();ctx.translate(x+barW/2,height-bottom+7);ctx.rotate(-.55);ctx.fillText(String(labels[i]||''),0,0);ctx.restore();});
+            values.forEach((v,i)=>{
+                const x=left+12+i*slot,h=plotH*(v/max),y=height-bottom-h;
+                ctx.fillStyle=colors.primary;ctx.fillRect(x,y,barW,h);
+                ctx.fillStyle=colors.text;ctx.fillText(String(v),x,y-5);
+                ctx.save();ctx.translate(x+barW/2,height-bottom+7);ctx.rotate(-.55);ctx.fillText(String(labels[i]||''),0,0);ctx.restore();
+                if(urls[i])hitRegions.push({type:'rect',x,y:Math.min(y,height-bottom-8),w:barW,h:Math.max(h,8),url:urls[i]});
+            });
         } else if (type === 'line') {
             const max=Math.max(...values,1),left=45,bottom=42,top=18,plotW=width-left-15,plotH=height-bottom-top;
             ctx.beginPath();ctx.moveTo(left,top);ctx.lineTo(left,height-bottom);ctx.lineTo(width-10,height-bottom);ctx.stroke();
             ctx.strokeStyle=colors.primary;ctx.lineWidth=2;ctx.beginPath();
-            values.forEach((v,i)=>{const x=left+(values.length===1?0:i*plotW/(values.length-1));const y=height-bottom-(v/max)*plotH;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
-            ctx.stroke();ctx.fillStyle=colors.primary;values.forEach((v,i)=>{const x=left+(values.length===1?0:i*plotW/(values.length-1));const y=height-bottom-(v/max)*plotH;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});
+            const points=values.map((v,i)=>({x:left+(values.length===1?plotW/2:i*plotW/(values.length-1)),y:height-bottom-(v/max)*plotH}));
+            points.forEach((point,i)=>{if(i===0)ctx.moveTo(point.x,point.y);else ctx.lineTo(point.x,point.y);});
+            ctx.stroke();ctx.fillStyle=colors.primary;
+            points.forEach((point,i)=>{ctx.beginPath();ctx.arc(point.x,point.y,4,0,Math.PI*2);ctx.fill();if(urls[i])hitRegions.push({type:'circle',x:point.x,y:point.y,r:12,url:urls[i]});});
             ctx.fillStyle=colors.text;if(labels.length){ctx.fillText(String(labels[0]),left,height-12);ctx.fillText(String(labels[labels.length-1]),Math.max(left,width-90),height-12);}
         } else if (type === 'pie') {
             const total=values.reduce((a,b)=>a+b,0)||1,cx=Math.min(width*.38,150),cy=140,r=105;
             const palette=[colors.primary,colors.success,colors.warning,colors.danger,'#6f5aa8','#3c8196','#8f6c42','#55705f'];
             let angle=-Math.PI/2;
-            values.forEach((v,i)=>{const next=angle+(v/total)*Math.PI*2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,next);ctx.closePath();ctx.fillStyle=palette[i%palette.length];ctx.fill();angle=next;});
+            values.forEach((v,i)=>{
+                const next=angle+(v/total)*Math.PI*2;
+                ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,next);ctx.closePath();ctx.fillStyle=palette[i%palette.length];ctx.fill();
+                if(urls[i])hitRegions.push({type:'sector',cx,cy,r,start:angle,end:next,url:urls[i]});
+                angle=next;
+            });
             ctx.font='11px system-ui';labels.slice(0,10).forEach((label,i)=>{const y=35+i*23;ctx.fillStyle=palette[i%palette.length];ctx.fillRect(width*.62,y-9,10,10);ctx.fillStyle=colors.text;ctx.fillText(String(label)+' ('+values[i]+')',width*.62+16,y);});
+        }
+
+        if(hitRegions.length){
+            canvas.style.cursor='pointer';
+            const normalizeAngle=(angle)=>{const full=Math.PI*2;return ((angle%full)+full)%full;};
+            canvas.onclick=(event)=>{
+                const rect=canvas.getBoundingClientRect();
+                const x=(event.clientX-rect.left)*(width/rect.width),y=(event.clientY-rect.top)*(height/rect.height);
+                const match=hitRegions.find((region)=>{
+                    if(region.type==='rect')return x>=region.x&&x<=region.x+region.w&&y>=region.y&&y<=region.y+region.h;
+                    if(region.type==='circle')return Math.hypot(x-region.x,y-region.y)<=region.r;
+                    if(region.type==='sector'){
+                        const distance=Math.hypot(x-region.cx,y-region.cy);if(distance>region.r)return false;
+                        const a=normalizeAngle(Math.atan2(y-region.cy,x-region.cx)),s=normalizeAngle(region.start),e=normalizeAngle(region.end);
+                        return s<=e?(a>=s&&a<=e):(a>=s||a<=e);
+                    }
+                    return false;
+                });
+                if(match?.url)window.location.href=match.url;
+            };
         }
     };
     document.querySelectorAll('canvas[data-chart]').forEach(drawChart);
