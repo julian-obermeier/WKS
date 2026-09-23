@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+ob_start();
+
 define('BASE_PATH',dirname(__DIR__));
 require_once BASE_PATH.'/app/Core/Env.php';
 
@@ -301,7 +303,8 @@ $expectHttp(fn()=>$valService->store($gi,[
     'first_name'=>'Reuse','last_name'=>'Seal','birth_date'=>'1980-01-01','handed_over_by_type'=>'patient','handed_over_by_name'=>'X','stored_at'=>'2026-09-24 08:10',
     'containers'=>[['container_type'=>'cassette','storage_location_id'=>$storage['id'],'cassette_id'=>$cassette2['id'],'seal_left'=>'100001','seal_right'=>'300002']]
 ]),409,'used seal cannot be reused after release');
-$assert($valRepo->cassette((int)$cassettes[0]['id'],$mr)!==null,'Marburg has its independent cassette number 1');
+$mrCassettes=$valRepo->cassettes($mr);
+$assert(isset($mrCassettes[0])&&(int)$mrCassettes[0]['cassette_number']===1&&$mrCassettes[0]['valuables_record_id']===null,'Marburg has its own free cassette number 1');
 
 $trash=new TrashService();$trash->move('valuables',$valuableId,$gi,$adminId);
 $trashRow=$pdo->query('SELECT * FROM trash_entries WHERE module="valuables" AND record_id='.(int)$valuableId)->fetch(PDO::FETCH_ASSOC);
@@ -362,3 +365,4 @@ $post=(new PostUpdateCheckService())->run();$assert($post['overall']!=='error','
 $auditCount=(int)$pdo->query('SELECT COUNT(*) FROM audit_logs')->fetchColumn();$assert($auditCount>10,'critical actions generated audit entries');
 
 echo "WKS integration acceptance OK: {$assertions} assertions.\n";
+ob_end_flush();
