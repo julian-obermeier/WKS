@@ -58,7 +58,7 @@ foreach($viewFiles as $file){
     if(preg_match('/Database::|->prepare\s*\(|->query\s*\(/',$source))$errors[]='Direct database access in view: '.str_replace(BASE_PATH.'/','',$file);
 }
 
-$sqlRoots=['app/Repositories','app/Services'];
+$sqlRoots=['app/Repositories','app/Services','database/migrations'];
 foreach($sqlRoots as $root){
     $path=BASE_PATH.'/'.$root;
     $it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path,FilesystemIterator::SKIP_DOTS));

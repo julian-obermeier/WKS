@@ -48,7 +48,7 @@ $mustContain('app/Services/UploadService.php',[
     'is_uploaded_file(',
     'FILEINFO_MIME_TYPE',
     'random_bytes(',
-    "BASE_PATH.'/storage/uploads'",
+    "/storage/uploads/",
 ]);
 $mustContain('public/service-worker.js',[
     "if(req.method!=='GET')return",

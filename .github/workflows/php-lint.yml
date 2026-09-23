@@ -25,3 +25,51 @@ jobs:
         run: |
           php -r 'json_decode(file_get_contents("CHANGELOG.json"), true, 512, JSON_THROW_ON_ERROR);'
           php -r 'json_decode(file_get_contents("public/manifest.webmanifest"), true, 512, JSON_THROW_ON_ERROR);'
+
+
+  mysql-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wks_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_URL: http://localhost
+      APP_BASE_PATH: ""
+      APP_TIMEZONE: Europe/Berlin
+      APP_KEY: integration-test-key
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: wks_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_CHARSET: utf8mb4
+      SESSION_NAME: WKS_TEST
+      SESSION_SECURE: "false"
+      SESSION_SAMESITE: Lax
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, fileinfo, zip
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -proot --silent && exit 0
+            sleep 2
+          done
+          exit 1
+      - name: Run database acceptance suite
+        run: php tests/integration_acceptance.php
