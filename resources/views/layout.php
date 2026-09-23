@@ -70,6 +70,9 @@ if ($user && active_location_id()) {
                     <?php if (can('valuables.read')): ?>
                         <a href="<?= e(url('valuables')) ?>" class="nav-link">▣ <span>Wertsachen</span></a>
                     <?php endif; ?>
+                    <?php if (can('house_bans.read')): ?>
+                        <a href="<?= e(url('house-bans')) ?>" class="nav-link">⊘ <span>Hausverbote</span></a>
+                    <?php endif; ?>
                     <?php if (can('system.users.manage') || can('system.roles.manage') || can('system.locations.manage') || can('system.audit.view') || can('system.settings.manage')): ?>
                         <div class="nav-section">Administration</div>
                     <?php endif; ?>

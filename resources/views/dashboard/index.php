@@ -47,6 +47,16 @@
 </div>
 <?php endif; ?>
 
+<?php if (can('house_bans.read')): ?>
+<div class="panel">
+    <div class="panel-header"><div><h2>Hausverbote</h2><p>Eigenständige Hausverbotsliste des aktiven Standorts</p></div></div>
+    <div class="quick-grid">
+        <a class="quick-card" href="<?= e(url('house-bans')) ?>"><span>⊘</span><strong>Hausverbotsliste</strong><small>Suchen, filtern und öffnen</small></a>
+        <?php if (can('house_bans.create')): ?><a class="quick-card" href="<?= e(url('house-bans/create')) ?>"><span>＋</span><strong>Hausverbot anlegen</strong><small>Name, Datum, Grund und Anhänge</small></a><?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (can('system.users.manage') || can('system.locations.manage') || can('system.audit.view')): ?>
 <div class="panel">
     <div class="panel-header"><div><h2>Administration</h2><p>Grundkonfiguration des Systems</p></div></div>
