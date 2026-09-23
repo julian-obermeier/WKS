@@ -63,7 +63,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_mysql, mbstring, fileinfo, zip
+          extensions: pdo_mysql, mbstring, fileinfo, zip, curl
       - name: Wait for MySQL
         run: |
           for i in {1..30}; do
@@ -73,6 +73,13 @@ jobs:
           exit 1
       - name: Run database acceptance suite
         run: php tests/integration_acceptance.php
+      - name: Run authenticated HTTP smoke tests
+        run: |
+          APP_URL=http://127.0.0.1:8098 php -S 127.0.0.1:8098 -t public public/index.php >/tmp/wks-http-smoke.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 1
+          php tests/http_smoke.php
       - name: Run performance guardrails
         run: php tests/performance_acceptance.php
       - name: Run real multipart upload security test
