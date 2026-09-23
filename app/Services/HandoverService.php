@@ -76,7 +76,7 @@ final class HandoverService
 
         Database::connection()->prepare(
             'UPDATE shift_handovers SET outgoing_confirmed_by=:user_id,outgoing_confirmed_at=NOW(),updated_at=NOW() WHERE id=:id'
-        )->execute(['user_id'=>Auth::id(),'to_session_id'=>$current['id'],'id'=>$handover['id']]);
+        )->execute(['user_id'=>Auth::id(),'id'=>$handover['id']]);
         (new AuditService())->log('handover_outgoing_confirmed','dutybook',(string)$handover['id'],null,null,[],null,Auth::id(),$locationId);
     }
 
@@ -96,7 +96,7 @@ final class HandoverService
         try{
             $pdo->prepare(
                 'UPDATE shift_handovers SET incoming_confirmed_by=:user_id,incoming_confirmed_at=NOW(),to_shift_session_id=:to_session_id,status="completed",updated_at=NOW() WHERE id=:id'
-            )->execute(['user_id'=>Auth::id(),'id'=>$handover['id']]);
+            )->execute(['user_id'=>Auth::id(),'to_session_id'=>$current['id'],'id'=>$handover['id']]);
             $pdo->prepare(
                 'UPDATE dutybook_entries e JOIN shift_handover_entries he ON he.entry_id=e.id
                  SET e.status="open",e.updated_at=NOW() WHERE he.handover_id=:handover_id AND e.status="handover"'
