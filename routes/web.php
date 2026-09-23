@@ -141,6 +141,7 @@ $router->post('/admin/special-reports/dynamic-field', [SpecialReportConfigContro
 
 $router->get('/valuables', [ValuablesController::class, 'index'], ['auth','password','location','permission:valuables.read']);
 $router->get('/valuables/search', [ValuablesController::class, 'search'], ['auth','password','location','permission:valuables.read']);
+$router->get('/valuables/archive', [ValuablesController::class, 'archive'], ['auth','password','location','permission:valuables.archive']);
 $router->get('/valuables/cassettes', [ValuablesController::class, 'cassettes'], ['auth','password','location','permission:valuables.read']);
 $router->get('/valuables/long-term', [ValuablesController::class, 'longTerm'], ['auth','password','location','permission:valuables.read']);
 $router->get('/valuables/check-seal', [ValuablesController::class, 'checkSeal'], ['auth','password','location','permission:valuables.store']);

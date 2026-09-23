@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace WKS\Controllers;
 
 use WKS\Core\Auth;
+use WKS\Core\Authorization;
 use WKS\Core\HttpException;
 use WKS\Core\Request;
 use WKS\Core\Response;
@@ -53,7 +54,10 @@ final class ValuablesController
     {
         $record=(new ValuablesRepository())->find((int)$id,(int)active_location_id());
         if(!$record)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
-        return View::render('valuables/show',compact('record'));
+        if($record['status']==='released'&&!Authorization::can('valuables.archive'))throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+        $retentionDays=(new ValuablesService())->retentionDays();
+        $retentionUntil=$record['released_at']?(new \DateTimeImmutable((string)$record['released_at']))->modify('+'.$retentionDays.' days'):null;
+        return View::render('valuables/show',compact('record','retentionDays','retentionUntil'));
     }
 
     public function releaseForm(Request $request,string $id): Response
@@ -103,9 +107,17 @@ final class ValuablesController
     public function search(Request $request): Response
     {
         $filters=[];
-        foreach(['custody_number','first_name','last_name','birth_date','internal_identifier','status','stored_from','stored_to','released_from','released_to','cassette_number','seal','storage_location_id'] as $key)$filters[$key]=$request->query($key,'');
+        foreach(['custody_number','first_name','last_name','birth_date','internal_identifier','stored_from','stored_to','cassette_number','seal','storage_location_id'] as $key)$filters[$key]=$request->query($key,'');
+        $filters['status']='stored';
         $locationId=(int)active_location_id();$repo=new ValuablesRepository();$result=$repo->search($locationId,$filters,max(1,(int)$request->query('page',1)));$storage=$repo->storageLocations($locationId);
         return View::render('valuables/search',compact('filters','result','storage'));
+    }
+
+    public function archive(Request $request): Response
+    {
+        $service=new ValuablesService();$retentionDays=$service->retentionDays();
+        $result=(new ValuablesRepository())->archive((int)active_location_id(),$retentionDays,max(1,(int)$request->query('page',1)));
+        return View::render('valuables/archive',compact('result','retentionDays'));
     }
 
     public function exportCsv(Request $request): Response

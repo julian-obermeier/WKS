@@ -165,6 +165,11 @@ final class ValuablesService
         return max(1,(int)(new SettingsRepository())->get('valuables.long_term_days',14));
     }
 
+    public function retentionDays(): int
+    {
+        return max(1,(int)(new SettingsRepository())->get('valuables.retention_days',3650));
+    }
+
     private function validatePerson(array $input): array
     {
         $first=trim((string)($input['first_name']??''));$last=trim((string)($input['last_name']??''));$birth=trim((string)($input['birth_date']??''));

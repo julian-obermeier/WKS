@@ -265,6 +265,29 @@ final class ValuablesRepository
         $stmt->execute(['location_id'=>$locationId]);return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function archive(int $locationId,int $retentionDays,int $page=1,int $perPage=30): array
+    {
+        $days=max(1,$retentionDays);$page=max(1,$page);$offset=($page-1)*$perPage;
+        $count=Database::connection()->prepare(
+            'SELECT COUNT(*) FROM valuables_records
+             WHERE location_id=:location_id AND status="released" AND deleted_at IS NULL'
+        );
+        $count->execute(['location_id'=>$locationId]);$total=(int)$count->fetchColumn();
+        $stmt=Database::connection()->prepare(
+            'SELECT r.*,
+                    DATE_ADD(r.released_at,INTERVAL '.$days.' DAY) AS retention_until,
+                    CASE WHEN r.released_at<=DATE_SUB(NOW(),INTERVAL '.$days.' DAY) THEN 1 ELSE 0 END AS retention_expired,
+                    GREATEST(0,DATEDIFF(DATE_ADD(r.released_at,INTERVAL '.$days.' DAY),NOW())) AS retention_days_remaining,
+                    (SELECT COUNT(*) FROM valuables_containers vc WHERE vc.valuables_record_id=r.id) AS container_count
+             FROM valuables_records r
+             WHERE r.location_id=:location_id AND r.status="released" AND r.deleted_at IS NULL
+             ORDER BY r.released_at DESC,r.custody_number DESC
+             LIMIT '.$perPage.' OFFSET '.$offset
+        );
+        $stmt->execute(['location_id'=>$locationId]);
+        return ['items'=>$stmt->fetchAll(PDO::FETCH_ASSOC),'total'=>$total,'page'=>$page,'pages'=>max(1,(int)ceil($total/$perPage))];
+    }
+
     public function counts(int $locationId,int $longTermDays): array
     {
         $days=max(0,$longTermDays);
