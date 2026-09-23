@@ -43,17 +43,31 @@ final class AdminRepository
 
     public function templates(): array
     {
-        return Database::connection()->query('SELECT * FROM document_templates ORDER BY template_name')->fetchAll(PDO::FETCH_ASSOC);
+        $rows=Database::connection()->query('SELECT * FROM document_templates ORDER BY template_name')->fetchAll(PDO::FETCH_ASSOC);
+        foreach($rows as &$row)$this->hydrateTemplate($row);
+        return $rows;
     }
 
     public function template(int $id): ?array
     {
-        $stmt=Database::connection()->prepare('SELECT * FROM document_templates WHERE id=:id LIMIT 1');$stmt->execute(['id'=>$id]);return $stmt->fetch(PDO::FETCH_ASSOC)?:null;
+        $stmt=Database::connection()->prepare('SELECT * FROM document_templates WHERE id=:id LIMIT 1');$stmt->execute(['id'=>$id]);$row=$stmt->fetch(PDO::FETCH_ASSOC)?:null;
+        if($row)$this->hydrateTemplate($row);
+        return $row;
     }
 
     public function templateByCode(string $code): ?array
     {
-        $stmt=Database::connection()->prepare('SELECT * FROM document_templates WHERE template_code=:code LIMIT 1');$stmt->execute(['code'=>$code]);return $stmt->fetch(PDO::FETCH_ASSOC)?:null;
+        $stmt=Database::connection()->prepare('SELECT * FROM document_templates WHERE template_code=:code LIMIT 1');$stmt->execute(['code'=>$code]);$row=$stmt->fetch(PDO::FETCH_ASSOC)?:null;
+        if($row)$this->hydrateTemplate($row);
+        return $row;
+    }
+
+    private function hydrateTemplate(array &$row): void
+    {
+        $settings=$row['settings_json']??null;
+        $decoded=is_string($settings)&&$settings!==''?json_decode($settings,true):[];
+        $row['settings']=is_array($decoded)?$decoded:[];
+        if(!in_array((string)($row['settings']['layout']??'standard'),['standard','compact'],true))$row['settings']['layout']='standard';
     }
 
     public function updateTemplate(int $id,array $data,int $userId): void

@@ -15,11 +15,12 @@ final class TemplateService
         $repo=new AdminRepository();$old=$repo->template($id);if(!$old)throw new HttpException(404,'Vorlage nicht gefunden.');
         $logo=$old['logo_path'];
         if($logoFile&&($logoFile['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE)$logo=$this->storeLogo($logoFile,$old['template_code'],$logo);
+        $layout=(string)($input['layout']??'standard');if(!in_array($layout,['standard','compact'],true))$layout='standard';
         $data=[
             'header_text'=>$this->nullable($input['header_text']??null),'footer_text'=>$this->nullable($input['footer_text']??null),
             'logo_path'=>$logo,'show_page_numbers'=>!empty($input['show_page_numbers'])?1:0,
             'watermark_text'=>$this->nullable($input['watermark_text']??null),
-            'settings_json'=>json_encode(['layout'=>(string)($input['layout']??'standard')],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)
+            'settings_json'=>json_encode(['layout'=>$layout],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)
         ];
         $repo->updateTemplate($id,$data,(int)Auth::id());
     }

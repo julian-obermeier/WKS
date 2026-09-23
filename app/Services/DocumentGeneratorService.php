@@ -16,21 +16,26 @@ final class DocumentGeneratorService
             'header'=>$template['header_text'],
             'footer'=>$template['footer_text'],
             'page_numbers'=>(bool)$template['show_page_numbers'],
+            'layout'=>(string)($template['settings']['layout']??'standard'),
         ]);
     }
 
     public function docxForTemplate(string $templateCode,string $title,array $sections): string
     {
         $template=(new AdminRepository())->templateByCode($templateCode);
+        $options=[];
         if($template){
             if($template['header_text'])$sections=['Kopfzeile'=>$template['header_text']]+$sections;
             if($template['footer_text'])$sections['Fußzeile']=$template['footer_text'];
+            $options['layout']=(string)($template['settings']['layout']??'standard');
         }
-        return $this->docx($title,$sections);
+        return $this->docx($title,$sections,$options);
     }
 
     public function pdf(string $title,array $sections,?string $watermark='VERTRAULICH',array $options=[]): string
     {
+        $layout=in_array((string)($options['layout']??'standard'),['standard','compact'],true)?(string)($options['layout']??'standard'):'standard';
+        $compact=$layout==='compact';$fontSize=$compact?8:10;$leading=$compact?10:13;$wrapWidth=$compact?118:95;$linesPerPage=$compact?62:48;
         $lines=[];
         if(!empty($options['header'])){$lines[]=(string)$options['header'];$lines[]='';}
         $lines[]=$title;
@@ -53,10 +58,10 @@ final class DocumentGeneratorService
         foreach($lines as $line){
             $line=trim((string)$line);
             if($line===''){$wrapped[]='';continue;}
-            foreach($this->wrap($line,95) as $part)$wrapped[]=$part;
+            foreach($this->wrap($line,$wrapWidth) as $part)$wrapped[]=$part;
         }
 
-        $pages=array_chunk($wrapped,48);
+        $pages=array_chunk($wrapped,$linesPerPage);
         if($pages===[])$pages=[[]];
         $objects=[];
         $fontId=3;
@@ -71,7 +76,7 @@ final class DocumentGeneratorService
         $objects[$fontId]='<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
 
         foreach($pages as $i=>$pageLines){
-            $commands=["BT","/F1 10 Tf","48 790 Td","13 TL"];
+            $commands=["BT","/F1 ".$fontSize." Tf","48 790 Td",$leading." TL"];
             if($watermark){
                 $wm=$this->pdfText($watermark);
                 $commands[]="q";
@@ -80,7 +85,7 @@ final class DocumentGeneratorService
                 $commands[]="90 350 Td";
                 $commands[]="(".$wm.") Tj";
                 $commands[]="Q";
-                $commands[]="/F1 10 Tf";
+                $commands[]="/F1 ".$fontSize." Tf";
                 $commands[]="-90 440 Td";
             }
             foreach($pageLines as $line){
@@ -124,9 +129,11 @@ final class DocumentGeneratorService
         return $pdf;
     }
 
-    public function docx(string $title,array $sections): string
+    public function docx(string $title,array $sections,array $options=[]): string
     {
         if(!class_exists(ZipArchive::class))throw new \RuntimeException('PHP-Erweiterung ZipArchive ist für DOCX nicht verfügbar.');
+        $layout=in_array((string)($options['layout']??'standard'),['standard','compact'],true)?(string)($options['layout']??'standard'):'standard';
+        $compact=$layout==='compact';$titleSize=$compact?28:32;$headingSize=$compact?21:24;$bodySize=$compact?18:20;$margin=$compact?720:1134;
         $dir=BASE_PATH.'/storage/generated';
         if(!is_dir($dir)&&!mkdir($dir,0770,true)&&!is_dir($dir))throw new \RuntimeException('Ausgabeverzeichnis kann nicht angelegt werden.');
         $path=$dir.'/'.bin2hex(random_bytes(20)).'.docx';
@@ -134,16 +141,16 @@ final class DocumentGeneratorService
         if($zip->open($path,ZipArchive::CREATE|ZipArchive::OVERWRITE)!==true)throw new \RuntimeException('DOCX-Datei kann nicht erzeugt werden.');
 
         $content='<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>';
-        $content.=$this->paragraph($title,true,32);
+        $content.=$this->paragraph($title,true,$titleSize);
         foreach($sections as $heading=>$value){
-            if($heading!=='')$content.=$this->paragraph((string)$heading,true,24);
+            if($heading!=='')$content.=$this->paragraph((string)$heading,true,$headingSize);
             if(is_array($value)){
-                foreach($value as $row)$content.=$this->paragraph($this->flatten($row));
+                foreach($value as $row)$content.=$this->paragraph($this->flatten($row),false,$bodySize);
             }else{
-                foreach(preg_split('/\R/u',(string)$value)?:[] as $line)$content.=$this->paragraph($line);
+                foreach(preg_split('/\R/u',(string)$value)?:[] as $line)$content.=$this->paragraph($line,false,$bodySize);
             }
         }
-        $content.='<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>';
+        $content.='<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="'.$margin.'" w:right="'.$margin.'" w:bottom="'.$margin.'" w:left="'.$margin.'"/></w:sectPr></w:body></w:document>';
 
         $zip->addFromString('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
         $zip->addFromString('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
