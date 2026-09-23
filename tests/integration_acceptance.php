@@ -93,7 +93,7 @@ $night=$pdo->prepare('SELECT * FROM shifts WHERE location_id=:id AND code="N"');
 $assert($night&&$night['start_time']==='21:40:00'&&$night['end_time']==='05:58:00'&&(int)$night['crosses_midnight']===1,'night shift seed is correct');
 
 echo "[2/9] Users, login, permissions and site separation\n";
-$roleRows=$pdo->query('SELECT id,code FROM roles')->fetchAll(PDO::FETCH_KEY_PAIR);
+$roleRows=$pdo->query('SELECT code,id FROM roles')->fetchAll(PDO::FETCH_KEY_PAIR);
 $userRepo=new UserRepository();
 $makeUser=static function(string $first,string $last,string $username,string $personnel,string $email,int $roleId,array $siteIds) use ($userRepo): int {
     return $userRepo->create([
