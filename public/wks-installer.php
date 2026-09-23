@@ -104,7 +104,7 @@ function wks_safe_relative(string $entry): ?string
     $entry=str_replace('\\','/',$entry);
     $parts=explode('/',$entry,2);
     if(count($parts)<2)return null; // GitHub-Top-Level-Verzeichnis
-    $relative=ltrim($parts[1],'/');
+    $relative=trim($parts[1],'/');
     if($relative==='')return null;
     if(str_contains($relative,"\0"))throw new RuntimeException('Ungültiger Dateiname im Archiv.');
     foreach(explode('/',$relative) as $segment){
