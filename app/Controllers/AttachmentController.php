@@ -8,6 +8,10 @@ use WKS\Core\HttpException;
 use WKS\Core\Request;
 use WKS\Core\Response;
 use WKS\Repositories\DutybookRepository;
+use WKS\Repositories\AnnouncementRepository;
+use WKS\Repositories\HouseBanRepository;
+use WKS\Repositories\ValuablesRepository;
+use WKS\Repositories\SpecialReportRepository;
 use WKS\Services\UploadService;
 
 final class AttachmentController
@@ -29,7 +33,9 @@ final class AttachmentController
             }
         } elseif ($attachment['module']==='valuables') {
             if(!Authorization::can('valuables.read'))throw new HttpException(403,'Kein Zugriff auf diesen Anhang.');
-            if(!(new ValuablesRepository())->find((int)$attachment['record_id'],(int)active_location_id())){
+            $record=(new ValuablesRepository())->find((int)$attachment['record_id'],(int)active_location_id());
+            if(!$record)throw new HttpException(404,'Anhang nicht gefunden.');
+            if($record['status']==='released'&&!Authorization::can('valuables.archive')){
                 throw new HttpException(404,'Anhang nicht gefunden.');
             }
         } elseif ($attachment['module']==='house_bans') {

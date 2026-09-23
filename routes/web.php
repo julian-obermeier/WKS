@@ -54,7 +54,7 @@ $router->post('/location/select', [LocationSelectionController::class, 'select']
 
 $router->post('/profile/theme', [ProfileController::class, 'theme'], ['auth']);
 
-$router->get('/', [DashboardController::class, 'index'], ['auth', 'password', 'location']);
+$router->get('/', [DashboardController::class, 'index'], ['auth', 'password', 'location', 'permission:dashboard.view']);
 
 $router->get('/admin/users', [UserController::class, 'index'], ['auth', 'password', 'location', 'permission:system.users.manage']);
 $router->get('/admin/users/create', [UserController::class, 'create'], ['auth', 'password', 'location', 'permission:system.users.manage']);
