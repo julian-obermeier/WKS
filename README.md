@@ -1,6 +1,6 @@
 # WKS – webbasiertes Wach- und Sicherheitsdienst-System
 
-WKS ist eine serverseitig gerenderte interne Betriebsanwendung für einen Sicherheitsdienst mit mehreren Standorten. Der aktuelle integrierte Entwicklungsstand ist **0.8.0-alpha**.
+WKS ist eine serverseitig gerenderte interne Betriebsanwendung für einen Sicherheitsdienst mit mehreren Standorten. Der aktuelle integrierte Entwicklungsstand ist **0.9.0-alpha**.
 
 Die Kernmodule sind Dienstbuch, Sonderberichte, Wertsachen und Hausverbote. Ergänzt werden sie durch Benutzer/Rollen/Rechte, Standorttrennung, Dashboard, Mitteilungen, Benachrichtigungen, Suche, Statistik, Audit-Log, Papierkorb, PWA, Systemstatus, Cronjobs, Fehlerprotokoll, Dokumentvorlagen und ein GitHub-basiertes Update-System.
 
@@ -36,6 +36,57 @@ Beispiel:
 
 ## Installation
 
+### Empfohlen: Online-Installer ohne SSH/Git
+
+Für Shared Hosting ist der Bootstrap-Installer der Standardweg. Voraussetzungen:
+
+- Domain/Subdomain zeigt auf ein Verzeichnis `<WKS>/public/`.
+- Eine leere MySQL-/MariaDB-Datenbank wurde beim Hoster angelegt.
+- PHP erfüllt die oben genannten Voraussetzungen.
+
+Ablauf:
+
+1. Nur die Datei `public/wks-installer.php` aus diesem Repository herunterladen.
+2. Auf dem Webspace nach `<WKS>/public/wks-installer.php` hochladen.
+3. Im Browser aufrufen:
+
+   ```
+   https://wks.example.de/wks-installer.php
+   ```
+
+4. Der Bootstrap-Installer prüft PHP, ZIP, PDO/MySQL, Downloadfähigkeit und Schreibrechte.
+5. Mit **„Aktuellen WKS-Stand herunterladen und installieren“** lädt er den öffentlichen `main`-Branch direkt von GitHub und installiert ihn in das übergeordnete WKS-Verzeichnis.
+6. Nach erfolgreichem Download löscht sich der Bootstrap-Installer selbst und öffnet automatisch `/install`.
+7. Der WKS-Webassistent fragt anschließend nur noch ab:
+   - WKS-Adresse
+   - optionalen Base-Pfad
+   - Datenbankserver und Port
+   - Datenbankname
+   - Datenbankbenutzer
+   - Datenbankpasswort
+   - Daten des ersten Administrators
+8. Der Assistent:
+   - testet die Datenbankverbindung,
+   - erzeugt einen kryptografisch zufälligen `APP_KEY`,
+   - erstellt die `.env` atomar mit restriktiven Dateirechten,
+   - legt die Laufzeitverzeichnisse an,
+   - führt sämtliche Migrationen aus,
+   - richtet Grunddaten und Standorte ein,
+   - erstellt den ersten Administrator,
+   - erzwingt für die Testphase global deaktivierten Mailversand,
+   - führt den Systemcheck aus,
+   - schreibt `storage/install.lock` und sperrt damit die Erstinstallation.
+
+Nach der Installation muss nur noch der Cronjob beim Hoster eingerichtet werden:
+
+```bash
+php /absoluter/pfad/WKS/bin/cron.php
+```
+
+Empfehlung: jede Minute ausführen lassen. WKS entscheidet intern, welche Jobs tatsächlich fällig sind.
+
+### Alternative: manuelle Installation mit Git/SSH
+
 1. Repository auf den Webspace holen:
 
    ```bash
@@ -43,43 +94,40 @@ Beispiel:
    cd WKS
    ```
 
-2. Konfiguration anlegen:
+2. Die Domain auf `WKS/public/` zeigen lassen.
 
-   ```bash
-   cp .env.example .env
-   ```
+3. Im Browser `/install` aufrufen. Der Webassistent erstellt die `.env` selbst; ein manuelles Kopieren von `.env.example` ist für die Erstinstallation nicht mehr erforderlich.
 
-3. In `.env` mindestens `APP_URL`, Datenbankzugang und Session-Einstellungen setzen. Für Produktivbetrieb:
+4. Falls gewünscht, kann `.env.example` weiterhin als Referenz für eine vollständig manuelle Konfiguration verwendet werden.
 
-   ```dotenv
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://wks.example.de
-   APP_TIMEZONE=Europe/Berlin
+### Verzeichnisstruktur und Document Root
 
-   DB_HOST=...
-   DB_PORT=3306
-   DB_DATABASE=...
-   DB_USERNAME=...
-   DB_PASSWORD=...
+Der Webserver muss auf das Verzeichnis **`public/`** zeigen. Dadurch befinden sich Uploads, Logs, generierte Dokumente, Konfiguration und PHP-Anwendungscode außerhalb des direkt erreichbaren Webroots.
 
-   SESSION_SECURE=true
-   SESSION_SAMESITE=Lax
-   ```
+Beispiel:
 
-4. Die Domain auf `WKS/public/` zeigen lassen.
+```
+/www/htdocs/<account>/WKS/
+├── app/
+├── bootstrap/
+├── config/
+├── database/
+├── public/          <- Document Root der Domain
+├── resources/
+├── routes/
+├── storage/
+└── .env
+```
 
-5. Folgende Verzeichnisse müssen für den PHP-Prozess beschreibbar sein:
+Folgende Verzeichnisse werden vom Online-Installer automatisch angelegt und geprüft:
 
-   - `storage/uploads`
-   - `storage/logs`
-   - `storage/exports`
-   - `storage/generated`
-   - `storage/sessions`
+- `storage/uploads`
+- `storage/logs`
+- `storage/exports`
+- `storage/generated`
+- `storage/sessions`
 
-   Auf Shared Hosting sind üblicherweise `770` für Verzeichnisse und `660`/Serverstandard für Dateien ausreichend. Keine pauschalen `777`-Rechte verwenden, wenn dies nicht zwingend erforderlich ist.
-
-6. Im Browser `/install` aufrufen. Die Erstinstallation führt die ausstehenden Migrationen aus und legt den ersten Administrator an.
+Keine pauschalen `777`-Rechte verwenden. Der PHP-Prozess benötigt lediglich die zum Schreiben erforderlichen Benutzer-/Gruppenrechte.
 
 ## Erstkonfiguration
 
