@@ -66,12 +66,26 @@ final class UpdateRepository
 
     public function latestUnseen(int $userId): ?array
     {
+        // Das automatische Modal darf ausschließlich die aktuellste Release-Version zeigen.
+        // Ältere, nie bestätigte Releases bleiben über "Was ist neu?" einsehbar, werden aber
+        // nach Bestätigung der aktuellen Version nicht nacheinander als Modal geöffnet.
         $stmt=Database::connection()->prepare(
-            'SELECT r.* FROM release_notes r
-             LEFT JOIN user_release_views v ON v.user_id=:user_id AND v.version=r.version
-             WHERE v.user_id IS NULL ORDER BY r.build_date DESC,r.id DESC LIMIT 1'
+            'SELECT r.*
+             FROM release_notes r
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM user_release_views v
+                 WHERE v.user_id=:user_id AND v.version=r.version
+             )
+             AND r.id=(
+                 SELECT latest.id FROM release_notes latest
+                 ORDER BY latest.build_date DESC,latest.id DESC LIMIT 1
+             )
+             LIMIT 1'
         );
-        $stmt->execute(['user_id'=>$userId]);$row=$stmt->fetch(PDO::FETCH_ASSOC);if(!$row)return null;
-        $row['sections']=json_decode((string)$row['changelog_json'],true)?:[];return $row;
+        $stmt->execute(['user_id'=>$userId]);
+        $row=$stmt->fetch(PDO::FETCH_ASSOC);
+        if(!$row)return null;
+        $row['sections']=json_decode((string)$row['changelog_json'],true)?:[];
+        return $row;
     }
 }
