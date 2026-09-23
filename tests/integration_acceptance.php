@@ -339,6 +339,15 @@ $valService->release($gi,$valuableId,[
 ]);
 $assert($valRepo->find($valuableId,$gi)['status']==='released','valuables release closes whole record');
 $assert($valRepo->cassette((int)$cassette1['id'],$gi)['valuables_record_id']===null,'cassette is free after full release');
+$archiveFiltered=$valRepo->archive($gi,$valService->retentionDays(),[
+    'released_from'=>'2026-09-24','released_to'=>'2026-09-24','container_type'=>'cassette',
+    'cassette_number'=>(int)$cassette1['cassette_number'],'storage_location_id'=>(int)$storage['id']
+],1,30);
+$assert($archiveFiltered['total']===1&&(int)$archiveFiltered['items'][0]['id']===$valuableId,'valuables archive filters released date, type, cassette and storage location');
+$switchUser($employeeId,$gi);
+$assert(!Authorization::can('valuables.archive'),'employee has no valuables archive right');
+$expectHttp(fn()=>$valService->addNote($gi,$valuableId,'Nach Auslagerung unzulässig'),422,'released valuables reject internal notes');
+$switchUser($adminId,$gi);
 $expectHttp(fn()=>$valService->store($gi,[
     'first_name'=>'Reuse','last_name'=>'Seal','birth_date'=>'1980-01-01','handed_over_by_type'=>'patient','handed_over_by_name'=>'X','stored_at'=>'2026-09-24 08:10',
     'containers'=>[['container_type'=>'cassette','storage_location_id'=>$storage['id'],'cassette_id'=>$cassette2['id'],'seal_left'=>'100001','seal_right'=>'300002']]
