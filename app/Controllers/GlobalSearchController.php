@@ -28,7 +28,7 @@ final class GlobalSearchController
         if(Authorization::can('house_bans.read'))$allowed[]='house_bans';
         $searchModules=$module!==''&&in_array($module,$allowed,true)?[$module]:$allowed;
         if($module!==''&&!in_array($module,$allowed,true))$module='';
-        $results=$q!==''?(new GlobalSearchRepository())->search($q,$selectedLocation,$searchModules,$from,$to):[];
+        $results=$q!==''?(new GlobalSearchRepository())->search($q,$selectedLocation,$searchModules,$from,$to,Authorization::can('valuables.archive')):[];
         return View::render('search/index',compact('q','module','results','allowed','locations','selectedLocation','from','to'));
     }
 
