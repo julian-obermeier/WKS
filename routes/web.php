@@ -192,6 +192,8 @@ $router->post('/notifications/read-all', [NotificationController::class, 'readAl
 
 $router->get('/search', [GlobalSearchController::class, 'index'], ['auth','password','location','permission:search.use']);
 $router->get('/statistics', [StatisticsController::class, 'index'], ['auth','password','location','permission:statistics.view']);
+$router->get('/statistics-export.csv', [StatisticsController::class, 'exportCsv'], ['auth','password','location','permission:statistics.export']);
+$router->get('/statistics-export.pdf', [StatisticsController::class, 'exportPdf'], ['auth','password','location','permission:statistics.export']);
 $router->get('/help', [HelpController::class, 'index'], ['auth','password','location']);
 
 
