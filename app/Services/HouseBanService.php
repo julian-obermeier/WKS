@@ -15,7 +15,7 @@ final class HouseBanService
         $data=$this->validate($input);$userId=(int)Auth::id();$repo=new HouseBanRepository();
         $id=$repo->create($data+['location_id'=>$locationId,'created_by'=>$userId,'updated_by'=>$userId]);
         try{
-            if(isset($files['attachments']))(new UploadService())->storeMany('house_bans',$id,$files['attachments']);
+            if(isset($files['attachments']))(new UploadService())->storeMany('house_bans',$id,$files['attachments'],null,(array)($input['attachment_descriptions']??[]));
         }catch(\Throwable $e){
             $repo->hardDelete($id);throw $e;
         }
@@ -31,7 +31,7 @@ final class HouseBanService
             $repo->update($id,$locationId,$data+['updated_by'=>$userId]);
             foreach(['ban_date','person_name','reason'] as $field)if((string)$old[$field]!== (string)$data[$field])$repo->addHistory($id,$field,$old[$field],$data[$field],$userId);
             $pdo->commit();
-            if(isset($files['attachments']))(new UploadService())->storeMany('house_bans',$id,$files['attachments']);
+            if(isset($files['attachments']))(new UploadService())->storeMany('house_bans',$id,$files['attachments'],null,(array)($input['attachment_descriptions']??[]));
         }catch(\Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
         (new AuditService())->log('house_ban_updated','house_bans',(string)$id,['ban_date'=>$old['ban_date'],'person_name'=>$old['person_name'],'reason'=>$old['reason']],$data,[],null,$userId,$locationId);
     }

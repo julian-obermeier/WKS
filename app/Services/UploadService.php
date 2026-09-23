@@ -18,20 +18,24 @@ final class UploadService
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>['docx'],
     ];
 
-    public function storeMany(string $module,int $recordId,array $files,?int $maxBytes=null): array
+    public function storeMany(string $module,int $recordId,array $files,?int $maxBytes=null,array $descriptions=[]): array
     {
         $normalized=$this->normalize($files);
         $stored=[];
 
-        foreach($normalized as $file){
+        foreach($normalized as $index=>$file){
             if(($file['error']??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE) continue;
-            $stored[]=$this->store($module,$recordId,$file,$maxBytes);
+            $description=trim((string)($descriptions[$index]??''));
+            if(in_array($module,['special_report','house_bans'],true)&&$description===''){
+                throw new HttpException(422,'Bitte für jede Anlage eine Beschreibung angeben.');
+            }
+            $stored[]=$this->store($module,$recordId,$file,$maxBytes,$description!==''?$description:null);
         }
 
         return $stored;
     }
 
-    public function store(string $module,int $recordId,array $file,?int $maxBytes=null): int
+    public function store(string $module,int $recordId,array $file,?int $maxBytes=null,?string $description=null): int
     {
         if(($file['error']??UPLOAD_ERR_OK)!==UPLOAD_ERR_OK) throw new HttpException(422,'Ein Anhang konnte nicht hochgeladen werden.');
         if(!isset($file['tmp_name'])||!is_uploaded_file((string)$file['tmp_name'])) throw new HttpException(422,'Ungültiger Datei-Upload.');
@@ -76,12 +80,15 @@ final class UploadService
         @chmod($target,0640);
 
         $sha=hash_file('sha256',$target);
+        $description=$description!==null?trim($description):null;
+        if($description==='')$description=null;
+        if($description!==null&&mb_strlen($description)>255)throw new HttpException(422,'Die Anlagenbeschreibung darf höchstens 255 Zeichen lang sein.');
         $stmt=Database::connection()->prepare(
             'INSERT INTO attachments (module,record_id,description,original_name,stored_name,mime_type,file_size,sha256,uploaded_by,uploaded_at)
-             VALUES (:module,:record_id,NULL,:original_name,:stored_name,:mime_type,:file_size,:sha256,:uploaded_by,NOW())'
+             VALUES (:module,:record_id,:description,:original_name,:stored_name,:mime_type,:file_size,:sha256,:uploaded_by,NOW())'
         );
         $stmt->execute([
-            'module'=>$module,'record_id'=>$recordId,'original_name'=>$original,'stored_name'=>$relative,
+            'module'=>$module,'record_id'=>$recordId,'description'=>$description,'original_name'=>$original,'stored_name'=>$relative,
             'mime_type'=>$mime,'file_size'=>$size,'sha256'=>$sha,'uploaded_by'=>Auth::id()
         ]);
         return (int)Database::connection()->lastInsertId();

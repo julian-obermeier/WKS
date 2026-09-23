@@ -45,7 +45,7 @@ final class SpecialReportService
             $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled'],(array)($type['force_requirements']??[]));
             $pdo->commit();
 
-            if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments']);
+            if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments'],null,(array)($input['attachment_descriptions']??[]));
             $this->storeWitnessAttachments($id,$witnessIds,$files['witness_attachments']??[]);
             $dutybookId=$this->createDutybookLink($locationId,$id,$sourceId,$type['name'],$year,$number,$core['incident_started_at']);
             $this->link($sourceId>0?$sourceId:$dutybookId,'dutybook',$id,'special_report','special_report',(int)Auth::id());
@@ -76,7 +76,7 @@ final class SpecialReportService
             ]);
             $witnessIds=$this->replaceRelations($repo,$id,$input,$dynamic['values'],(bool)$type['force_section_enabled'],(array)($type['force_requirements']??[]));
             $pdo->commit();
-            if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments']);
+            if(isset($files['attachments']))(new UploadService())->storeMany('special_report',$id,$files['attachments'],null,(array)($input['attachment_descriptions']??[]));
             $this->storeWitnessAttachments($id,$witnessIds,$files['witness_attachments']??[]);
             $after=$repo->find($id,$locationId);
             (new AuditService())->log('special_report_updated','special_reports',(string)$id,$before,$after?$this->snapshot($after):null,[],null,Auth::id(),$locationId);
