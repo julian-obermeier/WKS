@@ -60,6 +60,9 @@ final class InstallController
             $installer->configure($input);
             clear_old();
             flash('success','Konfiguration gespeichert und Datenbankverbindung erfolgreich geprüft.');
+            $base='/'.trim((string)$input['app_base_path'],'/');
+            if($base==='/')$base='';
+            return Response::redirect($base.'/install');
         }catch(\Throwable $e){
             $safe=$input;unset($safe['db_password']);set_old($safe);
             flash('error',$e->getMessage());
