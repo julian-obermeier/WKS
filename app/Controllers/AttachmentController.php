@@ -22,7 +22,12 @@ final class AttachmentController
             if(!(new DutybookRepository())->findEntry((int)$attachment['record_id'],(int)active_location_id())){
                 throw new HttpException(404,'Anhang nicht gefunden.');
             }
-        }else{
+        } elseif ($attachment['module']==='special_report') {
+            if(!Authorization::can('special_reports.read'))throw new HttpException(403,'Kein Zugriff auf diesen Anhang.');
+            if(!(new SpecialReportRepository())->find((int)$attachment['record_id'],(int)active_location_id())){
+                throw new HttpException(404,'Anhang nicht gefunden.');
+            }
+        } else {
             throw new HttpException(403,'Dieser Anhangstyp ist derzeit nicht freigegeben.');
         }
 

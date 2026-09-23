@@ -333,4 +333,25 @@ final class MasterDataRepository
         return $id;
     }
 
+
+    public function saveDynamicFieldForModule(?int $id,string $module,array $data,int $userId): int
+    {
+        if(!in_array($module,['dutybook_event','special_report_type'],true))throw new \\InvalidArgumentException('Ungültiges dynamisches Formularmodul.');
+        if($id===null){
+            $stmt=Database::connection()->prepare(
+                'INSERT INTO dynamic_fields (module,definition_id,field_key,label,field_type,required,sort_order,options_json,visibility_json,active,created_at,updated_at,created_by,updated_by)
+                 VALUES (:module,:definition_id,:field_key,:label,:field_type,:required,:sort_order,:options_json,NULL,:active,NOW(),NOW(),:user_id,:user_id)'
+            );
+            $stmt->execute($data+['module'=>$module,'user_id'=>$userId]);
+            return (int)Database::connection()->lastInsertId();
+        }
+        $stmt=Database::connection()->prepare(
+            'UPDATE dynamic_fields SET definition_id=:definition_id,field_key=:field_key,label=:label,field_type=:field_type,
+             required=:required,sort_order=:sort_order,options_json=:options_json,active=:active,updated_at=NOW(),updated_by=:user_id
+             WHERE id=:id AND module=:module'
+        );
+        $stmt->execute($data+['id'=>$id,'module'=>$module,'user_id'=>$userId]);
+        return $id;
+    }
+
 }
