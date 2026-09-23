@@ -28,10 +28,11 @@ final class Env
             $key = trim($key);
             $value = trim($value);
 
-            if (
-                (str_starts_with($value, '"') && str_ends_with($value, '"')) ||
-                (str_starts_with($value, "'") && str_ends_with($value, "'"))
-            ) {
+            if (str_starts_with($value, '"') && str_ends_with($value, '"')) {
+                $decoded=json_decode($value,true);
+                if(is_string($decoded))$value=$decoded;
+                else $value=substr($value,1,-1);
+            } elseif (str_starts_with($value, "'") && str_ends_with($value, "'")) {
                 $value = substr($value, 1, -1);
             }
 
