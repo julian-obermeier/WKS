@@ -166,4 +166,49 @@
             navigator.serviceWorker.register(swUrl).catch(() => {});
         });
     }
+
+    document.querySelectorAll('form[data-autosave]').forEach((autosaveForm) => {
+        let changed = false;
+        let saving = false;
+        let timer = null;
+        const mark = () => {
+            changed = true;
+            clearTimeout(timer);
+            timer = setTimeout(save, 2500);
+        };
+        const save = async () => {
+            if (!changed || saving) return;
+            saving = true;
+            const params = new URLSearchParams();
+            Array.from(autosaveForm.elements).forEach((field) => {
+                if (!field.name || field.disabled || field.type === 'file' || field.type === 'submit' || field.type === 'button') return;
+                if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) return;
+                if (field.tagName === 'SELECT' && field.multiple) {
+                    Array.from(field.selectedOptions).forEach((opt) => params.append(field.name, opt.value));
+                } else {
+                    params.append(field.name, field.value);
+                }
+            });
+            params.set('module', autosaveForm.dataset.autosaveModule || '');
+            params.set('context_key', autosaveForm.dataset.autosaveContext || 'new');
+            try {
+                const response = await fetch(autosaveForm.dataset.autosaveUrl, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','Accept':'application/json'},
+                    body: params.toString(),
+                    credentials: 'same-origin'
+                });
+                if (response.ok) changed = false;
+            } catch (_) {
+                // Nicht blockierend: reguläres Speichern bleibt möglich.
+            } finally {
+                saving = false;
+            }
+        };
+        autosaveForm.addEventListener('input', mark);
+        autosaveForm.addEventListener('change', mark);
+        autosaveForm.addEventListener('submit', () => { changed = false; clearTimeout(timer); });
+        window.addEventListener('pagehide', () => { if (changed) save(); });
+        setInterval(save, 20000);
+    });
 })();

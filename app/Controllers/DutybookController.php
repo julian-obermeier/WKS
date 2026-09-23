@@ -14,6 +14,7 @@ use WKS\Repositories\MasterDataRepository;
 use WKS\Services\DutybookService;
 use WKS\Services\DocumentGeneratorService;
 use WKS\Services\ShiftService;
+use WKS\Services\DraftAutosaveService;
 
 final class DutybookController
 {
@@ -33,13 +34,14 @@ final class DutybookController
 
     public function create(Request $request): Response
     {
-        return $this->form(null);
+        return $this->form(null,$request);
     }
 
     public function store(Request $request): Response
     {
         try{
             $id=(new DutybookService())->create((int)active_location_id(),$request->all(),$request->files());
+            (new DraftAutosaveService())->delete((int)Auth::id(),(int)active_location_id(),'dutybook','new');
             flash('success','Dienstbucheintrag wurde gespeichert.');
             return Response::redirect(url('dutybook/'.$id));
         }catch(HttpException $e){
@@ -64,13 +66,14 @@ final class DutybookController
             flash('info','Die Bearbeitungsfrist ist abgelaufen. Änderungen sind nur noch als Nachtrag möglich.');
             return Response::redirect(url('dutybook/'.$id));
         }
-        return $this->form($entry);
+        return $this->form($entry,$request);
     }
 
     public function update(Request $request,string $id): Response
     {
         try{
             (new DutybookService())->update((int)active_location_id(),(int)$id,$request->all(),$request->files());
+            (new DraftAutosaveService())->delete((int)Auth::id(),(int)active_location_id(),'dutybook','edit:'.(int)$id);
             flash('success','Dienstbucheintrag wurde aktualisiert.');
             return Response::redirect(url('dutybook/'.(int)$id));
         }catch(HttpException $e){
@@ -135,9 +138,14 @@ final class DutybookController
         return View::render('dutybook/print',compact('day','entries','date'),200,'print-layout');
     }
 
-    private function form(?array $entry): Response
+    private function form(?array $entry,?Request $request=null): Response
     {
         $locationId=(int)active_location_id();$master=new MasterDataRepository();
+        $context=$entry?'edit:'.(int)$entry['id']:'new';
+        $draft=(new DraftAutosaveService())->get((int)Auth::id(),$locationId,'dutybook',$context);
+        if($request && (string)$request->query('restore_autosave','')==='1' && $draft){
+            set_old($draft['payload']);
+        }
         $eventTypes=$master->eventTypes($locationId);
         $dynamic=[];
         foreach($eventTypes as $type)$dynamic[(int)$type['id']]=$master->dynamicFields('dutybook_event',(int)$type['id']);
@@ -146,7 +154,8 @@ final class DutybookController
             'entry'=>$entry,'current'=>$current,'shifts'=>$master->shifts($locationId),'categories'=>$master->categories($locationId),
             'eventTypes'=>$eventTypes,'dynamicByEvent'=>$dynamic,'personRoles'=>$master->personRoles($locationId),
             'places'=>$master->places($locationId),'measures'=>$master->measures($locationId),
-            'externalOrganizations'=>$master->externalOrganizations($locationId),'users'=>$master->usersForLocation($locationId)
+            'externalOrganizations'=>$master->externalOrganizations($locationId),'users'=>$master->usersForLocation($locationId),
+            'autosave'=>$draft,'autosaveContext'=>$context
         ]);
     }
 

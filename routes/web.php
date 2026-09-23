@@ -11,6 +11,7 @@ use WKS\Controllers\Admin\UserController;
 use WKS\Controllers\AttachmentController;
 use WKS\Controllers\AuthController;
 use WKS\Controllers\DashboardController;
+use WKS\Controllers\AutosaveController;
 use WKS\Controllers\DutybookController;
 use WKS\Controllers\HandoverController;
 use WKS\Controllers\HouseBanController;
@@ -215,3 +216,7 @@ $router->post('/admin/updates/migrate', [UpdateController::class, 'migrate'], ['
 
 $router->get('/whats-new', [ReleaseNotesController::class, 'index'], ['auth','password','location']);
 $router->post('/whats-new/{version}/seen', [ReleaseNotesController::class, 'seen'], ['auth','password','location']);
+
+
+$router->post('/autosave', [AutosaveController::class, 'store'], ['auth','password','location']);
+$router->post('/autosave/discard', [AutosaveController::class, 'discard'], ['auth','password','location']);

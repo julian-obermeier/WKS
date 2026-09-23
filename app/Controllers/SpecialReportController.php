@@ -13,6 +13,7 @@ use WKS\Repositories\MasterDataRepository;
 use WKS\Repositories\SpecialReportRepository;
 use WKS\Services\DocumentGeneratorService;
 use WKS\Services\SpecialReportService;
+use WKS\Services\DraftAutosaveService;
 
 final class SpecialReportController
 {
@@ -34,12 +35,12 @@ final class SpecialReportController
             $prefill=(new DutybookRepository())->findEntry($sourceId,(int)active_location_id());
             if(!$prefill)throw new HttpException(404,'Dienstbucheintrag nicht gefunden.');
         }
-        return $this->form(null,$prefill);
+        return $this->form(null,$prefill,$request);
     }
 
     public function store(Request $request): Response
     {
-        try{$id=(new SpecialReportService())->create((int)active_location_id(),$request->all(),$request->files());clear_old();flash('success','Sonderbericht wurde angelegt.');return Response::redirect(url('special-reports/'.$id));}
+        try{$id=(new SpecialReportService())->create((int)active_location_id(),$request->all(),$request->files());(new DraftAutosaveService())->delete((int)Auth::id(),(int)active_location_id(),'special_report','new');clear_old();flash('success','Sonderbericht wurde angelegt.');return Response::redirect(url('special-reports/'.$id));}
         catch(HttpException $e){set_old($request->all());flash('error',$e->getMessage());$source=(int)$request->post('source_dutybook_entry_id',0);return Response::redirect(url('special-reports/create'.($source?'?dutybook_id='.$source:'')));}
     }
 
@@ -54,12 +55,12 @@ final class SpecialReportController
     {
         $report=(new SpecialReportRepository())->find((int)$id,(int)active_location_id());if(!$report)throw new HttpException(404,'Sonderbericht nicht gefunden.');
         if(in_array($report['status'],['completed','reviewed'],true)){flash('info','Dieser Bericht ist gesperrt.');return Response::redirect(url('special-reports/'.$id));}
-        return $this->form($report,null);
+        return $this->form($report,null,$request);
     }
 
     public function update(Request $request,string $id): Response
     {
-        try{(new SpecialReportService())->update((int)active_location_id(),(int)$id,$request->all(),$request->files());clear_old();flash('success','Sonderbericht wurde gespeichert.');return Response::redirect(url('special-reports/'.(int)$id));}
+        try{(new SpecialReportService())->update((int)active_location_id(),(int)$id,$request->all(),$request->files());(new DraftAutosaveService())->delete((int)Auth::id(),(int)active_location_id(),'special_report','edit:'.(int)$id);clear_old();flash('success','Sonderbericht wurde gespeichert.');return Response::redirect(url('special-reports/'.(int)$id));}
         catch(HttpException $e){set_old($request->all());flash('error',$e->getMessage());return Response::redirect(url('special-reports/'.(int)$id.'/edit'));}
     }
 
@@ -103,9 +104,14 @@ final class SpecialReportController
 
     private function report(int $id): array{$r=(new SpecialReportRepository())->find($id,(int)active_location_id());if(!$r)throw new HttpException(404,'Sonderbericht nicht gefunden.');return $r;}
 
-    private function form(?array $report,?array $prefill): Response
+    private function form(?array $report,?array $prefill,?Request $request=null): Response
     {
-        $locationId=(int)active_location_id();$repo=new SpecialReportRepository();$master=new MasterDataRepository();$types=$repo->types($locationId);$dynamic=[];foreach($types as $t)$dynamic[(int)$t['id']]=$master->dynamicFields('special_report_type',(int)$t['id']);
-        return View::render('special-reports/form',['report'=>$report,'prefill'=>$prefill,'types'=>$types,'dynamicByType'=>$dynamic,'places'=>$master->places($locationId),'roles'=>$master->personRoles($locationId),'users'=>$master->usersForLocation($locationId),'externalOrganizations'=>$master->externalOrganizations($locationId)]);
+        $locationId=(int)active_location_id();$repo=new SpecialReportRepository();
+        $context=$report?'edit:'.(int)$report['id']:'new';
+        $draft=(new DraftAutosaveService())->get((int)Auth::id(),$locationId,'special_report',$context);
+        if($request && (string)$request->query('restore_autosave','')==='1' && $draft){
+            set_old($draft['payload']);
+        }$master=new MasterDataRepository();$types=$repo->types($locationId);$dynamic=[];foreach($types as $t)$dynamic[(int)$t['id']]=$master->dynamicFields('special_report_type',(int)$t['id']);
+        return View::render('special-reports/form',['report'=>$report,'prefill'=>$prefill,'types'=>$types,'dynamicByType'=>$dynamic,'places'=>$master->places($locationId),'roles'=>$master->personRoles($locationId),'users'=>$master->usersForLocation($locationId),'externalOrganizations'=>$master->externalOrganizations($locationId),'autosave'=>$draft,'autosaveContext'=>$context]);
     }
 }
