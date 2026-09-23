@@ -60,5 +60,27 @@ final class ExceptionHandler
         );
 
         @file_put_contents($dir . '/application.log', $entry, FILE_APPEND | LOCK_EX);
+
+        try {
+            $pdo = Database::connection();
+            $exists = $pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='error_logs'")->fetchColumn();
+            if ($exists) {
+                $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+                $module = trim((string) strtok(trim((string) parse_url($uri, PHP_URL_PATH), '/'), '/')) ?: 'system';
+                $userId = Session::get('user_id');
+                $stmt = $pdo->prepare(
+                    'INSERT INTO error_logs (occurred_at,module,user_id,message,technical_details,status)
+                     VALUES (NOW(),:module,:user_id,:message,:details,"open")'
+                );
+                $stmt->execute([
+                    'module' => substr($module, 0, 100),
+                    'user_id' => is_numeric($userId) ? (int) $userId : null,
+                    'message' => $e->getMessage(),
+                    'details' => $e::class . "\n" . $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString(),
+                ]);
+            }
+        } catch (Throwable) {
+            // Datei-Logging bleibt die Fallback-Ebene, insbesondere bei DB-Ausfällen.
+        }
     }
 }

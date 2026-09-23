@@ -20,6 +20,11 @@ use WKS\Controllers\HelpController;
 use WKS\Controllers\AnnouncementController;
 use WKS\Controllers\NotificationController;
 use WKS\Controllers\Admin\TrashController;
+use WKS\Controllers\Admin\SystemController;
+use WKS\Controllers\Admin\ErrorLogController;
+use WKS\Controllers\Admin\CronController;
+use WKS\Controllers\Admin\MailController;
+use WKS\Controllers\Admin\TemplateController;
 use WKS\Controllers\InstallController;
 use WKS\Controllers\LocationSelectionController;
 use WKS\Controllers\ProfileController;
@@ -179,3 +184,22 @@ $router->post('/notifications/read-all', [NotificationController::class, 'readAl
 $router->get('/search', [GlobalSearchController::class, 'index'], ['auth','password','location','permission:search.use']);
 $router->get('/statistics', [StatisticsController::class, 'index'], ['auth','password','location','permission:statistics.view']);
 $router->get('/help', [HelpController::class, 'index'], ['auth','password','location']);
+
+
+$router->get('/admin/system/status', [SystemController::class, 'status'], ['auth','password','location','permission:system.status.view']);
+$router->post('/admin/system/status/check', [SystemController::class, 'runCheck'], ['auth','password','location','permission:system.status.view']);
+$router->post('/admin/system/maintenance', [SystemController::class, 'maintenance'], ['auth','password','location','permission:system.maintenance.manage']);
+
+$router->get('/admin/errors', [ErrorLogController::class, 'index'], ['auth','password','location','permission:system.errors.view']);
+$router->post('/admin/errors/{id}/status', [ErrorLogController::class, 'status'], ['auth','password','location','permission:system.errors.manage']);
+
+$router->get('/admin/cron', [CronController::class, 'index'], ['auth','password','location','permission:system.cron.manage']);
+$router->post('/admin/cron/run', [CronController::class, 'run'], ['auth','password','location','permission:system.cron.manage']);
+$router->post('/admin/cron/{id}', [CronController::class, 'update'], ['auth','password','location','permission:system.cron.manage']);
+
+$router->get('/admin/mail', [MailController::class, 'index'], ['auth','password','location','permission:system.mail.manage']);
+$router->post('/admin/mail', [MailController::class, 'update'], ['auth','password','location','permission:system.mail.manage']);
+
+$router->get('/admin/templates', [TemplateController::class, 'index'], ['auth','password','location','permission:system.templates.manage']);
+$router->post('/admin/templates/{id}', [TemplateController::class, 'update'], ['auth','password','location','permission:system.templates.manage']);
+$router->get('/admin/templates/{id}/preview', [TemplateController::class, 'preview'], ['auth','password','location','permission:system.templates.manage']);

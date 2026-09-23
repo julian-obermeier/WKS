@@ -62,4 +62,31 @@ final class NotificationRepository
         $stmt->execute(['event_code'=>$eventCode,'role_code'=>$roleCode,'location_id'=>$locationId]);
         $value=$stmt->fetchColumn();return $value===false?true:(bool)$value;
     }
+
+    public function emailEnabled(string $eventCode,?string $roleCode,?int $locationId): bool
+    {
+        $stmt=Database::connection()->prepare(
+            'SELECT email_enabled FROM notification_rules
+             WHERE event_code=:event_code AND active=1
+               AND (role_code=:role_code OR role_code IS NULL)
+               AND (location_id=:location_id OR location_id IS NULL)
+             ORDER BY location_id IS NOT NULL DESC,role_code IS NOT NULL DESC LIMIT 1'
+        );
+        $stmt->execute(['event_code'=>$eventCode,'role_code'=>$roleCode,'location_id'=>$locationId]);
+        $value=$stmt->fetchColumn();return $value===false?false:(bool)$value;
+    }
+
+    public function existsRecent(int $userId,string $eventCode,?string $targetUrl,int $hours=24): bool
+    {
+        $hours=max(1,min(168,$hours));
+        $stmt=Database::connection()->prepare(
+            'SELECT COUNT(*) FROM notifications
+             WHERE user_id=:user_id AND event_code=:event_code
+               AND ((target_url IS NULL AND :target_url IS NULL) OR target_url=:target_url2)
+               AND created_at>=DATE_SUB(NOW(),INTERVAL '.$hours.' HOUR)'
+        );
+        $stmt->execute(['user_id'=>$userId,'event_code'=>$eventCode,'target_url'=>$targetUrl,'target_url2'=>$targetUrl]);
+        return (bool)$stmt->fetchColumn();
+    }
+
 }

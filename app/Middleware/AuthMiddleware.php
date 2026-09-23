@@ -33,6 +33,9 @@ final class AuthMiddleware
         }
 
         $settings = new SettingsRepository();
+        if ((bool) $settings->get('system.maintenance_mode', false) && ($user['role_code'] ?? '') !== 'admin' && $request->path() !== '/logout') {
+            return \WKS\Core\View::render('maintenance/index', [], 503);
+        }
         $timeoutMinutes = (int) $settings->get('security.inactivity_minutes', config('security.default_inactivity_minutes', 30));
         $lastActivity = (int) Session::get('last_activity', time());
 
