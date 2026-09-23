@@ -69,8 +69,8 @@ final class ValuablesService
 
                 if($cassetteId){
                     $repo->assignCassette($locationId,$cassetteId,$recordId,$containerId);
-                    $repo->recordSeal($container['seal_left'],$recordId,$containerId,'left',$userId,$storedAt);
-                    $repo->recordSeal($container['seal_right'],$recordId,$containerId,'right',$userId,$storedAt);
+                    $repo->recordSeal($container['seal_left'],$number,$recordId,$containerId,'left',$userId,$storedAt);
+                    $repo->recordSeal($container['seal_right'],$number,$recordId,$containerId,'right',$userId,$storedAt);
                 }
             }
 
