@@ -4,12 +4,15 @@
   "title": "WKS – integrierter Qualitäts- und Betriebsstand",
   "sections": {
     "Neu": [
+      "Webbasierte Erstinstallation erstellt .env, APP_KEY, Storage, Datenbankstruktur und ersten Administrator automatisch",
+      "Ein-Datei-Bootstrap-Installer lädt den aktuellen main-Stand direkt von GitHub und startet anschließend den WKS-Webassistenten",
       "Standortbezogene Regeln für automatische Dienstbucheinträge bei Schicht-, Sonderbericht- und Wertsachenereignissen",
       "Konfigurierbare dynamische Abschnitte in Sonderberichten",
       "Auditierte Statistikexporte als CSV und PDF",
       "Authentifizierte HTTP-Smoke-Tests für Rollenrechte, Standorttrennung und IDOR-Schutz"
     ],
     "Verbessert": [
+      "Erstinstallation prüft PHP-Erweiterungen, Schreibrechte, Datenbankverbindung und führt abschließend den Systemstatuscheck aus",
       "Globale Suche um Standort-, Modul- und Zeitraumfilter erweitert",
       "Audit-Filterrecht technisch vom reinen Anzeigerecht getrennt",
       "Audit-Details zeigen Altwert, Neuwert und relevante Metadaten",
@@ -22,6 +25,7 @@
       "Standortisolierung für Kassetten und Fachdatensätze in Integrationstests abgesichert"
     ],
     "Sicherheit": [
+      "Installer sperrt sich nach erfolgreicher Einrichtung über storage/install.lock und erzwingt deaktivierten Mailversand für die Testphase",
       "Statische Architekturtests prüfen CSRF, Sessions, Berechtigungen, Standortmiddleware, Uploadschutz und PWA-Offlinegrenzen",
       "Content-Security-Policy und weitere Security Header werden serverseitig gesetzt",
       "Mailversand bleibt im Testbetrieb standardmäßig global deaktiviert"
