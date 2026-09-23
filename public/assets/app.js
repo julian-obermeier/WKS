@@ -54,12 +54,58 @@
     const form = document.querySelector('form[data-unsaved-warning]');
     if (form) {
         let dirty = false;
+        let pendingTarget = null;
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop';
+        modal.hidden = true;
+        modal.innerHTML = '<div class="modal-card"><h2>Ungespeicherte Änderungen</h2><p>Wie möchten Sie fortfahren?</p><div class="form-actions"><button type="button" class="button ghost" data-unsaved-continue>Weiter bearbeiten</button><button type="button" class="button danger" data-unsaved-discard>Verwerfen</button><button type="button" class="button primary" data-unsaved-save>Speichern und verlassen</button></div></div>';
+        document.body.appendChild(modal);
+
+        const token = form.querySelector('input[name="_token"]')?.value || '';
+        const autosaveUrl = form.dataset.autosaveUrl || '';
+        const module = form.dataset.autosaveModule || '';
+        const context = form.dataset.autosaveContext || '';
+
+        const serialize = () => {
+            const params = new URLSearchParams();
+            Array.from(form.elements).forEach((field) => {
+                if (!field.name || field.disabled || field.type === 'file' || field.type === 'submit' || field.type === 'button') return;
+                if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) return;
+                if (field.tagName === 'SELECT' && field.multiple) Array.from(field.selectedOptions).forEach((opt) => params.append(field.name, opt.value));
+                else params.append(field.name, field.value);
+            });
+            params.set('module', module); params.set('context_key', context);
+            return params;
+        };
+
+        const saveDraft = async () => {
+            if (!autosaveUrl) return;
+            await fetch(autosaveUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','Accept':'application/json'},body:serialize().toString(),credentials:'same-origin'});
+        };
+        const discardDraft = async () => {
+            if (!autosaveUrl || !module) return;
+            const discardUrl = new URL('autosave/discard', autosaveUrl).href;
+            const params = new URLSearchParams({_token:token,module,context_key:context,json:'1'});
+            await fetch(discardUrl,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','Accept':'application/json'},body:params.toString(),credentials:'same-origin'});
+        };
+        const leave = () => { dirty=false; modal.hidden=true; if(pendingTarget) window.location.href=pendingTarget; };
+
         form.addEventListener('input', () => dirty = true);
+        form.addEventListener('change', () => dirty = true);
         form.addEventListener('submit', () => dirty = false);
+        document.addEventListener('click', (event) => {
+            const link=event.target.closest('a[href]');
+            if(!dirty||!link||link.target==='_blank'||link.hasAttribute('download'))return;
+            const target=new URL(link.href,window.location.href);
+            if(target.origin!==window.location.origin)return;
+            event.preventDefault();pendingTarget=target.href;modal.hidden=false;
+        });
+        modal.querySelector('[data-unsaved-continue]').addEventListener('click',()=>{modal.hidden=true;pendingTarget=null;});
+        modal.querySelector('[data-unsaved-save]').addEventListener('click',async()=>{try{await saveDraft();leave();}catch(_){alert('Entwurf konnte nicht gespeichert werden. Bitte speichern Sie das Formular regulär.');}});
+        modal.querySelector('[data-unsaved-discard]').addEventListener('click',async()=>{try{await discardDraft();}catch(_){}leave();});
         window.addEventListener('beforeunload', (event) => {
             if (!dirty) return;
-            event.preventDefault();
-            event.returnValue = '';
+            event.preventDefault();event.returnValue='';
         });
     }
 

@@ -23,6 +23,9 @@ final class AutosaveController
         (new DraftAutosaveService())->delete((int)Auth::id(),(int)active_location_id(),$module,$context);
         $target=(string)$request->post('redirect_to',url());
         if(!str_starts_with($target,url()))$target=url();
+        if ((string)$request->post('json','') === '1') {
+            return new Response(json_encode(['ok'=>true],JSON_THROW_ON_ERROR),200,['Content-Type'=>'application/json; charset=UTF-8','Cache-Control'=>'no-store']);
+        }
         flash('success','Automatischer Entwurf wurde verworfen.');
         return Response::redirect($target);
     }
