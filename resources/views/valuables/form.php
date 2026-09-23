@@ -8,6 +8,7 @@ $prefill=$correctionParent??[];
 ?>
 <div class="page-header split"><div><p class="eyebrow">Wertsachen</p><h1><?= e($title) ?></h1><p><?= $correctionParent?'Neuer, eigenständiger Verwahrvorgang mit neuer Verwahrnummer. Der alte Vorgang bleibt abgeschlossen.':'Keine einzelnen Inhalte erfassen – dokumentiert werden Person, Behältnisse, Lagerorte, Kassetten und Siegel.' ?></p></div><a class="button ghost" href="<?= e(url($correctionParent?'valuables/'.$correctionParent['id']:'valuables')) ?>">Zurück</a></div>
 <?php if($correctionParent):?><div class="notice warning"><strong>Korrekturfolge:</strong> Ausgangsvorgang Verwahrnr. <?= e(str_pad((string)$correctionParent['custody_number'],4,'0',STR_PAD_LEFT)) ?> bleibt unverändert vollständig ausgelagert.</div><?php endif;?>
+<?php if($correctionParent):?><div class="panel"><label>Korrekturgrund*<textarea name="correction_reason" rows="4" required><?= e(old('correction_reason')) ?></textarea><small>Dieser Grund wird als dokumentierter Nachtrag am ursprünglichen, weiterhin abgeschlossenen Vorgang gespeichert.</small></label></div><?php endif;?>
 <form method="post" enctype="multipart/form-data" action="<?= e(url('valuables')) ?>" class="panel form-grid" data-unsaved-warning>
 <?= csrf_field() ?><input type="hidden" name="correction_parent_id" value="<?= (int)($correctionParent['id']??0) ?>">
 <label>Vorname*<input name="first_name" required value="<?= e(old('first_name',$prefill['first_name']??'')) ?>"></label>
