@@ -186,7 +186,7 @@ final class MasterDataRepository
                 'INSERT INTO dutybook_categories (location_id,name,sort_order,active,created_at,updated_at,created_by,updated_by)
                  VALUES (:location_id,:name,:sort_order,:active,NOW(),NOW(),:created_by,:updated_by)'
             );
-            $stmt->execute($data + ['location_id' => $locationId, 'user_id' => $userId]);
+            $stmt->execute($data + ['location_id' => $locationId, 'created_by' => $userId, 'updated_by' => $userId]);
             return (int) Database::connection()->lastInsertId();
         }
 
