@@ -87,6 +87,18 @@ final class ValuablesController
         (new ValuablesService())->addNote((int)active_location_id(),(int)$id,(string)$request->post('note_text',''));flash('success','Interne Notiz wurde ergänzt.');return Response::redirect(url('valuables/'.(int)$id));
     }
 
+    public function addendum(Request $request,string $id): Response
+    {
+        if(!Authorization::can('valuables.archive'))throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+        try{
+            (new ValuablesService())->addAddendum((int)active_location_id(),(int)$id,(string)$request->post('reason',''),(string)$request->post('addendum_text',''));
+            flash('success','Dokumentierter Nachtrag wurde ergänzt.');
+        }catch(HttpException $e){
+            flash('error',$e->getMessage());
+        }
+        return Response::redirect(url('valuables/'.(int)$id));
+    }
+
     public function cassettes(Request $request): Response
     {
         $cassettes=(new ValuablesRepository())->cassettes((int)active_location_id());
