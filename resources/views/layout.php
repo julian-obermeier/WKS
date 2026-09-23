@@ -111,6 +111,7 @@ if ($user && active_location_id()) {
                         <a href="<?= e(url('admin/trash')) ?>" class="nav-link">⌫ <span>Papierkorb</span></a>
                     <?php endif; ?>
                     <?php if (can('system.status.view')): ?><a href="<?= e(url('admin/system/status')) ?>" class="nav-link">◌ <span>Systemstatus</span></a><?php endif; ?>
+                    <?php if (can('system.updates.manage')): ?><a href="<?= e(url('admin/updates')) ?>" class="nav-link">⇧ <span>Systemupdates</span></a><?php endif; ?>
                     <?php if (can('system.errors.view')): ?><a href="<?= e(url('admin/errors')) ?>" class="nav-link">⚠ <span>Fehlerprotokoll</span></a><?php endif; ?>
                     <?php if (can('system.cron.manage')): ?><a href="<?= e(url('admin/cron')) ?>" class="nav-link">↻ <span>Cronjobs</span></a><?php endif; ?>
                     <?php if (can('system.mail.manage')): ?><a href="<?= e(url('admin/mail')) ?>" class="nav-link">✉ <span>E-Mail</span></a><?php endif; ?>
@@ -119,7 +120,8 @@ if ($user && active_location_id()) {
                         <a href="<?= e(url('admin/settings/security')) ?>" class="nav-link">⚙ <span>Sicherheit</span></a>
                         <a href="<?= e(url('admin/settings/valuables')) ?>" class="nav-link">▣ <span>Wertsachen-Einstellungen</span></a>
                     <?php endif; ?>
-                <a href="<?= e(url('help')) ?>" class="nav-link">? <span>Hilfe</span></a>
+                <a href="<?= e(url('whats-new')) ?>" class="nav-link">✦ <span>Was ist neu?</span></a>
+                    <a href="<?= e(url('help')) ?>" class="nav-link">? <span>Hilfe</span></a>
                 </nav>
                 <div class="sidebar-footer">Version <?= e(config('app.version', 'dev')) ?></div>
             </aside>
@@ -135,6 +137,21 @@ if ($user && active_location_id()) {
     <?php endif; ?>
 
     <?= $content ?>
+
+    <?php if ($user && !empty($whatsNew)): ?>
+        <div class="modal-backdrop" data-release-modal>
+            <div class="modal-card">
+                <div class="panel-header"><div><p class="eyebrow">Was ist neu?</p><h2><?= e($whatsNew['version']) ?> · <?= e($whatsNew['title']) ?></h2><p><?= e($whatsNew['build_date']) ?></p></div></div>
+                <?php foreach ($whatsNew['sections'] as $category => $items): ?>
+                    <h3 class="section-title"><?= e($category) ?></h3>
+                    <ul><?php foreach ((array) $items as $item): ?><li><?= e($item) ?></li><?php endforeach; ?></ul>
+                <?php endforeach; ?>
+                <form method="post" action="<?= e(url('whats-new/'.rawurlencode($whatsNew['version']).'/seen')) ?>" class="form-actions">
+                    <?= csrf_field() ?><button class="button primary" type="submit">Gesehen</button>
+                </form>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <?php if ($user): ?>
             </main>

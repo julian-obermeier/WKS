@@ -12,6 +12,14 @@ final class View
             throw new \RuntimeException('View nicht gefunden: ' . $view);
         }
 
+        if ($layout === 'layout' && Auth::check() && !array_key_exists('whatsNew', $data)) {
+            try {
+                $data['whatsNew'] = (new \WKS\Services\ReleaseNotesService())->latestUnseen((int) Auth::id());
+            } catch (\Throwable) {
+                $data['whatsNew'] = null;
+            }
+        }
+
         extract($data, EXTR_SKIP);
         ob_start();
         require $viewFile;

@@ -25,6 +25,8 @@ use WKS\Controllers\Admin\ErrorLogController;
 use WKS\Controllers\Admin\CronController;
 use WKS\Controllers\Admin\MailController;
 use WKS\Controllers\Admin\TemplateController;
+use WKS\Controllers\Admin\UpdateController;
+use WKS\Controllers\ReleaseNotesController;
 use WKS\Controllers\InstallController;
 use WKS\Controllers\LocationSelectionController;
 use WKS\Controllers\ProfileController;
@@ -204,3 +206,12 @@ $router->post('/admin/mail', [MailController::class, 'update'], ['auth','passwor
 $router->get('/admin/templates', [TemplateController::class, 'index'], ['auth','password','location','permission:system.templates.manage']);
 $router->post('/admin/templates/{id}', [TemplateController::class, 'update'], ['auth','password','location','permission:system.templates.manage']);
 $router->get('/admin/templates/{id}/preview', [TemplateController::class, 'preview'], ['auth','password','location','permission:system.templates.manage']);
+
+
+$router->get('/admin/updates', [UpdateController::class, 'index'], ['auth','password','location','permission:system.updates.manage']);
+$router->post('/admin/updates/check', [UpdateController::class, 'check'], ['auth','password','location','permission:system.updates.manage']);
+$router->post('/admin/updates/install', [UpdateController::class, 'install'], ['auth','password','location','permission:system.updates.manage']);
+$router->post('/admin/updates/migrate', [UpdateController::class, 'migrate'], ['auth','password','location','permission:system.updates.manage']);
+
+$router->get('/whats-new', [ReleaseNotesController::class, 'index'], ['auth','password','location']);
+$router->post('/whats-new/{version}/seen', [ReleaseNotesController::class, 'seen'], ['auth','password','location']);
