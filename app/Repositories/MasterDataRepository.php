@@ -226,6 +226,7 @@ final class MasterDataRepository
 
     public function saveDynamicField(?int $id, int $locationId, array $data, int $userId): int
     {
+        $data['visibility_json']=$data['visibility_json']??null;
         $event = $this->eventType((int) $data['definition_id'], $locationId);
         if (!$event) throw new \InvalidArgumentException('Ungültige Ereignisart für Zusatzfeld.');
 
@@ -345,6 +346,7 @@ final class MasterDataRepository
         $data['section_name']=$module==='special_report_type'
             ? (trim((string)($data['section_name']??''))?:'Zusatzangaben')
             : null;
+        $data['visibility_json']=$data['visibility_json']??null;
         if($id===null){
             $stmt=Database::connection()->prepare(
                 'INSERT INTO dynamic_fields (module,definition_id,field_key,label,section_name,field_type,required,sort_order,options_json,visibility_json,active,created_at,updated_at,created_by,updated_by)
