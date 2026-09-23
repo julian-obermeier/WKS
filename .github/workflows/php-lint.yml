@@ -73,3 +73,15 @@ jobs:
           exit 1
       - name: Run database acceptance suite
         run: php tests/integration_acceptance.php
+      - name: Run real multipart upload security test
+        run: |
+          php -r 'file_put_contents("/tmp/wks-valid.png", base64_decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2t0YAAAAASUVORK5CYII="));'
+          printf '%s\n' '<?php echo "not an image"; ?>' > /tmp/wks-invalid.png
+          php -S 127.0.0.1:8099 tests/http_upload_router.php >/tmp/wks-upload-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 1
+          VALID_CODE=$(curl -sS -o /tmp/wks-valid-response.json -w "%{http_code}" -F "file=@/tmp/wks-valid.png;type=image/png" http://127.0.0.1:8099/upload)
+          test "$VALID_CODE" = "200" || { cat /tmp/wks-upload-server.log; cat /tmp/wks-valid-response.json; exit 1; }
+          INVALID_CODE=$(curl -sS -o /tmp/wks-invalid-response.json -w "%{http_code}" -F "file=@/tmp/wks-invalid.png;type=image/png" http://127.0.0.1:8099/upload)
+          test "$INVALID_CODE" = "422" || { cat /tmp/wks-upload-server.log; cat /tmp/wks-invalid-response.json; exit 1; }
