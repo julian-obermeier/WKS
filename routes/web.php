@@ -151,6 +151,7 @@ $router->get('/valuables/{id}', [ValuablesController::class, 'show'], ['auth','p
 $router->get('/valuables/{id}/release', [ValuablesController::class, 'releaseForm'], ['auth','password','location','permission:valuables.release']);
 $router->post('/valuables/{id}/release', [ValuablesController::class, 'release'], ['auth','password','location','permission:valuables.release']);
 $router->post('/valuables/{id}/note', [ValuablesController::class, 'note'], ['auth','password','location','permission:valuables.add_note']);
+$router->post('/valuables/{id}/addendum', [ValuablesController::class, 'addendum'], ['auth','password','location','permission:valuables.add_note']);
 $router->get('/valuables/{id}/correction', [ValuablesController::class, 'correction'], ['auth','password','location','permission:valuables.store']);
 $router->get('/valuables-export.csv', [ValuablesController::class, 'exportCsv'], ['auth','password','location','permission:valuables.export']);
 
