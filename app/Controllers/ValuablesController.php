@@ -32,6 +32,7 @@ final class ValuablesController
 
     public function correction(Request $request,string $id): Response
     {
+        if(!Authorization::can('valuables.archive'))throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
         $parent=(new ValuablesRepository())->find((int)$id,(int)active_location_id());
         if(!$parent)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
         if($parent['status']!=='released')throw new HttpException(422,'Nur ein vollständig ausgelagerter Vorgang kann als Korrekturfolge neu angelegt werden.');
@@ -65,12 +66,18 @@ final class ValuablesController
     {
         $record=(new ValuablesRepository())->find((int)$id,(int)active_location_id());
         if(!$record)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
-        if($record['status']!=='stored'){flash('info','Der Vorgang ist bereits vollständig ausgelagert.');return Response::redirect(url('valuables/'.$id));}
+        if($record['status']!=='stored'){
+            if(!Authorization::can('valuables.archive'))throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+            flash('info','Der Vorgang ist bereits vollständig ausgelagert.');return Response::redirect(url('valuables/'.$id));
+        }
         return View::render('valuables/release',compact('record'));
     }
 
     public function release(Request $request,string $id): Response
     {
+        $existing=(new ValuablesRepository())->find((int)$id,(int)active_location_id());
+        if(!$existing)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+        if($existing['status']!=='stored'&&!Authorization::can('valuables.archive'))throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
         try{(new ValuablesService())->release((int)active_location_id(),(int)$id,$request->all());flash('success','Vorgang wurde vollständig ausgelagert.');return Response::redirect(url('valuables/'.(int)$id));}
         catch(HttpException $e){flash('error',$e->getMessage());return Response::redirect(url('valuables/'.(int)$id.'/release'));}
     }
@@ -116,20 +123,34 @@ final class ValuablesController
 
     public function archive(Request $request): Response
     {
-        $service=new ValuablesService();$retentionDays=$service->retentionDays();
-        $result=(new ValuablesRepository())->archive((int)active_location_id(),$retentionDays,max(1,(int)$request->query('page',1)));
-        return View::render('valuables/archive',compact('result','retentionDays'));
+        $service=new ValuablesService();$retentionDays=$service->retentionDays();$locationId=(int)active_location_id();
+        $filters=$this->archiveFilters($request);
+        $repo=new ValuablesRepository();$result=$repo->archive($locationId,$retentionDays,$filters,max(1,(int)$request->query('page',1)));
+        $storage=$repo->storageLocations($locationId);
+        return View::render('valuables/archive',compact('result','retentionDays','filters','storage'));
     }
 
     public function exportCsv(Request $request): Response
     {
-        $filters=['status'=>(string)$request->query('status',''),'stored_from'=>(string)$request->query('from',''),'stored_to'=>(string)$request->query('to','')];
-        $result=(new ValuablesRepository())->search((int)active_location_id(),$filters,1,10000);
+        $status=(string)$request->query('status','stored');if(!in_array($status,['stored','released'],true))$status='stored';
+        $repo=new ValuablesRepository();$locationId=(int)active_location_id();$service=new ValuablesService();
+        if($status==='released'){
+            if(!Authorization::can('valuables.archive'))throw new HttpException(403,'Für den Export ausgelagerter Wertsachen ist das Archivrecht erforderlich.');
+            $filters=$this->archiveFilters($request);
+            $result=$repo->archive($locationId,$service->retentionDays(),$filters,1,10000);
+        }else{
+            $filters=[
+                'status'=>'stored','stored_from'=>$this->dateQuery($request,'stored_from','from'),
+                'stored_to'=>$this->dateQuery($request,'stored_to','to'),'container_type'=>(string)$request->query('container_type',''),
+                'cassette_number'=>(int)$request->query('cassette_number',0),'storage_location_id'=>(int)$request->query('storage_location_id',0)
+            ];
+            $result=$repo->search($locationId,$filters,1,10000);
+        }
         $fp=fopen('php://temp','r+');fputcsv($fp,['Verwahrnummer','Vorname','Nachname','Geburtsdatum','Kennung','Status','Einlagerung','Auslagerung','Behältnisse'],';');
         foreach($result['items'] as $r)fputcsv($fp,[str_pad((string)$r['custody_number'],4,'0',STR_PAD_LEFT),$r['first_name'],$r['last_name'],$r['birth_date'],$r['internal_identifier'],$r['status'],$r['stored_at'],$r['released_at'],$r['container_count']],';');
         rewind($fp);$csv=(string)stream_get_contents($fp);fclose($fp);
-        (new AuditService())->log('valuables_export_csv','valuables',null,null,['filter'=>$filters,'count'=>$result['total']],[],$request);
-        return new Response("\xEF\xBB\xBF".$csv,200,['Content-Type'=>'text/csv; charset=UTF-8','Content-Disposition'=>'attachment; filename="Wertsachen_Export.csv"']);
+        (new AuditService())->log('valuables_export_csv','valuables',null,null,['status'=>$status,'filter'=>$filters,'count'=>$result['total']],[],$request);
+        return new Response("\xEF\xBB\xBF".$csv,200,['Content-Type'=>'text/csv; charset=UTF-8','Content-Disposition'=>'attachment; filename="Wertsachen_'.$status.'_Export.csv"']);
     }
 
     private function form(?array $correctionParent): Response
@@ -161,7 +182,29 @@ final class ValuablesController
     {
         $record=(new ValuablesRepository())->find($id,(int)active_location_id());
         if(!$record)throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
+        if($record['status']==='released'&&!Authorization::can('valuables.archive'))throw new HttpException(404,'Wertsachenvorgang nicht gefunden.');
         return $record;
+    }
+
+    private function archiveFilters(Request $request): array
+    {
+        $types=['cassette','bag','sack','case','pocket','other'];$containerType=(string)$request->query('container_type','');
+        if(!in_array($containerType,$types,true))$containerType='';
+        $from=$this->dateQuery($request,'released_from','from');$to=$this->dateQuery($request,'released_to','to');
+        if($from!==''&&$to!==''&&$from>$to)[$from,$to]=[$to,$from];
+        $cassette=(int)$request->query('cassette_number',0);if($cassette<1||$cassette>100)$cassette=0;
+        return [
+            'released_from'=>$from,'released_to'=>$to,'container_type'=>$containerType,
+            'cassette_number'=>$cassette,'storage_location_id'=>max(0,(int)$request->query('storage_location_id',0))
+        ];
+    }
+
+    private function dateQuery(Request $request,string $primary,string $fallback=''): string
+    {
+        $value=trim((string)$request->query($primary,$fallback!==''?$request->query($fallback,''):''));
+        if($value==='')return '';
+        $date=\DateTimeImmutable::createFromFormat('!Y-m-d',$value);
+        return $date&&$date->format('Y-m-d')===$value?$value:'';
     }
 
     private function exportSections(array $record): array
