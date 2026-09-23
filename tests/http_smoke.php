@@ -66,6 +66,9 @@ $employeeCookie=tempnam(sys_get_temp_dir(),'wks-employee-');
 $admin=$client($adminCookie);
 $employee=$client($employeeCookie);
 
+$installBlocked=$admin('/install');
+$assert($installBlocked['status']===302&&str_contains($installBlocked['headers'],'/login'),'installed system blocks installer');
+
 $login=$admin('/login');
 $assert($login['status']===200&&str_contains($login['body'],'Anmelden'),'login page renders');
 $loginPost=$admin('/login','POST',[
