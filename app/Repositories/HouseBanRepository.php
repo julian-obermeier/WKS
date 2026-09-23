@@ -75,9 +75,9 @@ final class HouseBanRepository
     public function softDelete(int $id,int $locationId,int $userId): void
     {
         Database::connection()->prepare(
-            'UPDATE house_bans SET deleted_at=NOW(),deleted_by=:user,updated_at=NOW(),updated_by=:user
+            'UPDATE house_bans SET deleted_at=NOW(),deleted_by=:deleted_by,updated_at=NOW(),updated_by=:updated_by
              WHERE id=:id AND location_id=:location_id AND deleted_at IS NULL'
-        )->execute(['user'=>$userId,'id'=>$id,'location_id'=>$locationId]);
+        )->execute(['deleted_by'=>$userId,'updated_by'=>$userId,'id'=>$id,'location_id'=>$locationId]);
     }
 
     public function restore(int $id): void
