@@ -8,7 +8,7 @@ use WKS\Core\Database;
 
 final class GlobalSearchRepository
 {
-    public function search(string $q,int $locationId,array $modules,?string $from=null,?string $to=null): array
+    public function search(string $q,int $locationId,array $modules,?string $from=null,?string $to=null,bool $includeReleasedValuables=false): array
     {
         $q=trim($q);if($q==='')return [];$like='%'.$q.'%';$results=[];$pdo=Database::connection();
 
@@ -67,6 +67,7 @@ final class GlobalSearchRepository
                  LEFT JOIN cassettes c ON c.id=vc.cassette_id
                  LEFT JOIN seal_usages s ON s.valuables_record_id=r.id
                  WHERE r.location_id=:location_id AND r.deleted_at IS NULL
+                    '.(!$includeReleasedValuables?' AND r.status="stored"':'').'
                     '.($from?' AND r.stored_at>=:v_from':'').'
                     '.($to?' AND r.stored_at<=:v_to':'').' AND
                     (r.first_name LIKE :vq1 OR r.last_name LIKE :vq2 OR r.internal_identifier LIKE :vq3
