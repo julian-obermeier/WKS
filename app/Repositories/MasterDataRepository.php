@@ -166,7 +166,7 @@ final class MasterDataRepository
                 'INSERT INTO shifts (location_id, code, name, start_time, end_time, crosses_midnight, sort_order, active, created_at, updated_at, created_by, updated_by)
                  VALUES (:location_id, :code, :name, :start_time, :end_time, :crosses_midnight, :sort_order, :active, NOW(), NOW(), :created_by, :updated_by)'
             );
-            $stmt->execute($data + ['location_id' => $locationId, 'user_id' => $userId]);
+            $stmt->execute($data + ['location_id' => $locationId, 'created_by' => $userId, 'updated_by' => $userId]);
             return (int) Database::connection()->lastInsertId();
         }
 
@@ -194,7 +194,7 @@ final class MasterDataRepository
             'UPDATE dutybook_categories SET name=:name,sort_order=:sort_order,active=:active,updated_at=NOW(),updated_by=:user_id
              WHERE id=:id AND (location_id=:location_id OR location_id IS NULL)'
         );
-        $stmt->execute($data + ['id'=>$id,'location_id'=>$locationId,'created_by'=>$userId,'updated_by'=>$userId]);
+        $stmt->execute($data + ['id'=>$id,'location_id'=>$locationId,'user_id'=>$userId]);
         return $id;
     }
 
@@ -215,7 +215,7 @@ final class MasterDataRepository
              offer_special_report=:offer_special_report,offer_valuables=:offer_valuables,auto_entry_enabled=:auto_entry_enabled,
              updated_at=NOW(),updated_by=:user_id WHERE id=:id AND location_id=:location_id'
         );
-        $stmt->execute($data + ['id'=>$id,'location_id'=>$locationId,'created_by'=>$userId,'updated_by'=>$userId]);
+        $stmt->execute($data + ['id'=>$id,'location_id'=>$locationId,'user_id'=>$userId]);
         return $id;
     }
 
@@ -242,7 +242,7 @@ final class MasterDataRepository
                  f.updated_at=NOW(),f.updated_by=:user_id
              WHERE f.id=:id AND f.module="dutybook_event" AND e.location_id=:location_id'
         );
-        $stmt->execute($data + ['id'=>$id,'location_id'=>$locationId,'created_by'=>$userId,'updated_by'=>$userId]);
+        $stmt->execute($data + ['id'=>$id,'location_id'=>$locationId,'user_id'=>$userId]);
         return $id;
     }
 
@@ -350,7 +350,7 @@ final class MasterDataRepository
              required=:required,sort_order=:sort_order,options_json=:options_json,active=:active,updated_at=NOW(),updated_by=:user_id
              WHERE id=:id AND module=:module'
         );
-        $stmt->execute($data+['id'=>$id,'module'=>$module,'created_by'=>$userId,'updated_by'=>$userId]);
+        $stmt->execute($data+['id'=>$id,'module'=>$module,'user_id'=>$userId]);
         return $id;
     }
 
