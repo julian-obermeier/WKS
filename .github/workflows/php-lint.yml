@@ -14,4 +14,12 @@ jobs:
         with:
           php-version: '8.4'
       - name: Lint PHP files
-        run: find app bootstrap config database public routes resources -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find app bootstrap config database public routes resources bin tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Static quality checks
+        run: php tests/static_quality.php
+      - name: Check JavaScript syntax
+        run: node --check public/assets/app.js
+      - name: Validate JSON artifacts
+        run: |
+          php -r 'json_decode(file_get_contents("CHANGELOG.json"), true, 512, JSON_THROW_ON_ERROR);'
+          php -r 'json_decode(file_get_contents("public/manifest.webmanifest"), true, 512, JSON_THROW_ON_ERROR);'
